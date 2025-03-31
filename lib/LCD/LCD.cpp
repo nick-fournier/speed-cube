@@ -5,7 +5,7 @@
 
 // SPI Configuration
 #define SPI_PORT spi1
-#define SPI_SPEED 50000000 // 10 - 60 MHz
+#define SPI_SPEED 10000000 // 10 - 60 MHz
 #define PIN_SCK  10
 #define PIN_MOSI 11
 #define PIN_MISO 12
@@ -146,8 +146,8 @@ static void lcd_draw_char_scaled(uint16_t x, uint16_t y, char ch, uint16_t color
 
 // Initialize the LCD
 void lcd_init() {
-    // Initialize SPI
-    spi_init(SPI_PORT, SPI_SPEED); // 10 MHz
+    // Initialize SPI at a lower speed initially for stability
+    spi_init(SPI_PORT, 1000000); // Start at 1 MHz for initialization
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
     
@@ -162,32 +162,126 @@ void lcd_init() {
     gpio_set_dir(PIN_RST, GPIO_OUT);
     gpio_set_dir(PIN_BL, GPIO_OUT);
     
-    // Reset sequence
+    // Initial state
+    gpio_put(PIN_CS, 1);  // Deselect display
+    gpio_put(PIN_DC, 1);  // Data mode
+    gpio_put(PIN_BL, 0);  // Backlight off initially
+    
+    // More robust reset sequence
+    sleep_ms(50);         // Wait for power stabilization
     gpio_put(PIN_RST, 1);
     sleep_ms(10);
-    gpio_put(PIN_RST, 0);
-    sleep_ms(10);
-    gpio_put(PIN_RST, 1);
-    sleep_ms(120);
+    gpio_put(PIN_RST, 0); // Reset low
+    sleep_ms(20);         // Longer reset pulse
+    gpio_put(PIN_RST, 1); // Reset high
+    sleep_ms(150);        // Longer wait after reset
     
-    // Turn on backlight
-    gpio_put(PIN_BL, 1);
-    
-    // Initialize display
+    // Initialize display with more robust sequence
     lcd_write_command(ILI9488_SWRESET);    // Software reset
-    sleep_ms(120);
+    sleep_ms(150);                         // Longer delay after reset
     
     lcd_write_command(ILI9488_SLPOUT);     // Sleep out
-    sleep_ms(120);
+    sleep_ms(150);                         // Longer delay after sleep out
+    
+    // Power control settings
+    lcd_write_command(0xC0);               // Power Control 1
+    lcd_write_data(0x0E);
+    lcd_write_data(0x0E);
+    
+    lcd_write_command(0xC1);               // Power Control 2
+    lcd_write_data(0x41);
+    lcd_write_data(0x00);
+    
+    lcd_write_command(0xC5);               // VCOM Control
+    lcd_write_data(0x00);
+    lcd_write_data(0x22);
+    lcd_write_data(0x80);
+    
+    // Enhanced color and contrast settings
+    lcd_write_command(0xE0);               // Positive Gamma Control
+    lcd_write_data(0x00);
+    lcd_write_data(0x07);
+    lcd_write_data(0x0F);
+    lcd_write_data(0x0D);
+    lcd_write_data(0x1B);
+    lcd_write_data(0x0A);
+    lcd_write_data(0x3C);
+    lcd_write_data(0x78);
+    lcd_write_data(0x4A);
+    lcd_write_data(0x07);
+    lcd_write_data(0x0E);
+    lcd_write_data(0x09);
+    lcd_write_data(0x1B);
+    lcd_write_data(0x1E);
+    lcd_write_data(0x0F);
+    
+    lcd_write_command(0xE1);               // Negative Gamma Control
+    lcd_write_data(0x00);
+    lcd_write_data(0x22);
+    lcd_write_data(0x24);
+    lcd_write_data(0x06);
+    lcd_write_data(0x12);
+    lcd_write_data(0x07);
+    lcd_write_data(0x36);
+    lcd_write_data(0x47);
+    lcd_write_data(0x47);
+    lcd_write_data(0x06);
+    lcd_write_data(0x0A);
+    lcd_write_data(0x07);
+    lcd_write_data(0x30);
+    lcd_write_data(0x37);
+    lcd_write_data(0x0F);
     
     // Set default rotation (0 degrees)
     lcd_set_rotation(LCD_ROTATION_0);
     
+    // Set default contrast
+    lcd_set_contrast(0xC0);  // Higher contrast for better blacks
+    
     lcd_write_command(ILI9488_COLMOD);     // Interface Pixel Format
     lcd_write_data(0x55);                  // 16 bits per pixel
     
+    // Additional settings for stability
+    lcd_write_command(0xB0);               // Interface Mode Control
+    lcd_write_data(0x00);
+    
+    lcd_write_command(0xB1);               // Frame Rate Control
+    lcd_write_data(0xA0);                  // 60Hz
+    
+    lcd_write_command(0xB4);               // Display Inversion Control
+    lcd_write_data(0x02);                  // 2-dot inversion
+    
+    lcd_write_command(0xB6);               // Display Function Control
+    lcd_write_data(0x02);
+    lcd_write_data(0x02);
+    lcd_write_data(0x3B);
+    
     lcd_write_command(ILI9488_DISPON);     // Display On
-    sleep_ms(120);
+    sleep_ms(150);                         // Longer delay after display on
+    
+    // Now increase SPI speed to operational speed
+    spi_set_baudrate(SPI_PORT, SPI_SPEED);
+    
+    // Turn on backlight only after display is fully initialized
+    sleep_ms(50);
+    gpio_put(PIN_BL, 1);
+}
+
+// Set display contrast and gamma
+void lcd_set_contrast(uint8_t contrast) {
+    // Set VCOM control for contrast
+    lcd_write_command(0xC5);               // VCOM Control
+    lcd_write_data(0x00);                  // First parameter
+    lcd_write_data(contrast);              // Contrast value (higher = more contrast)
+    lcd_write_data(0x80);                  // Third parameter
+    
+    // Adjust gamma for better black levels
+    lcd_write_command(0xF2);               // Enable Gamma
+    lcd_write_data(0x01);                  // Enable gamma adjustment
+    
+    // Set display inversion for better color reproduction
+    lcd_write_command(0xB4);               // Display Inversion Control
+    lcd_write_data(0x01);                  // 1-dot inversion for better blacks
 }
 
 // Set the display rotation
