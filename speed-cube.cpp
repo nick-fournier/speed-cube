@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 #include "LCD.h"
 #include "L76B.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
+#include "hardware/irq.h"
+
 
 L76B gps;
 
