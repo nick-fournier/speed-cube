@@ -62,6 +62,7 @@ target_link_libraries(speed-cube
         LCD
         hardware_spi
         hardware_gpio
+        pico_multicore
         )
 
 pico_add_extra_outputs(speed-cube)

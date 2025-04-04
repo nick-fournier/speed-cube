@@ -1,54 +1,21 @@
 #include "LCD.h"
-#include "font.h"
+#include "font5x7.h"
+#include "font10x14.h"
+#include "math.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "hardware/gpio.h"
 
-// SPI Configuration
-#define SPI_PORT spi1
-#define SPI_SPEED 10000000 // 10 - 60 MHz
-#define PIN_SCK  10
-#define PIN_MOSI 11
-#define PIN_MISO 12
-#define PIN_CS   9
-#define PIN_DC   8
-#define PIN_RST  15
-#define PIN_BL   13
 
-// ILI9488 Commands
-#define ILI9488_SWRESET    0x01
-#define ILI9488_SLPOUT     0x11
-#define ILI9488_DISPON     0x29
-#define ILI9488_CASET      0x2A
-#define ILI9488_PASET      0x2B
-#define ILI9488_RAMWR      0x2C
-#define ILI9488_MADCTL     0x36
-#define ILI9488_COLMOD     0x3A
-
-// MADCTL values for different rotations
-#define MADCTL_MX  0x40  // Row Address Order
-#define MADCTL_MY  0x80  // Column Address Order
-#define MADCTL_MV  0x20  // Row / Column Exchange
-#define MADCTL_ML  0x10  // Vertical Refresh Order
-#define MADCTL_RGB 0x00  // RGB order
-#define MADCTL_BGR 0x08  // BGR order
-
-// Current rotation
-static uint8_t current_rotation = 0;
-
-// Function prototypes for internal use
-static void lcd_write_command(uint8_t cmd);
-static void lcd_write_data(uint8_t data);
-static void lcd_write_data_16bit(uint16_t data);
-static void lcd_set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-static void lcd_draw_pixel(uint16_t x, uint16_t y, uint16_t color);
-static void lcd_draw_char(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg_color);
-static void lcd_draw_char_scaled(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg_color, uint8_t scale);
+// Constructor
+LCD::LCD() : currentRotation(0) {
+    // Initialize member variables
+}
 
 // Initialize the LCD
-void lcd_init() {
+void LCD::init() {
     // Initialize SPI at a lower speed initially for stability
-    spi_init(SPI_PORT, 1000000); // Start at 1 MHz for initialization
+    spi_init(SPI_PORT == 0 ? spi0 : spi1, 1000000); // Start at 1 MHz for initialization
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
     
@@ -78,90 +45,90 @@ void lcd_init() {
     sleep_ms(150);        // Longer wait after reset
     
     // Initialize display with more robust sequence
-    lcd_write_command(ILI9488_SWRESET);    // Software reset
-    sleep_ms(150);                         // Longer delay after reset
+    writeCommand(ILI9488_SWRESET);    // Software reset
+    sleep_ms(150);                    // Longer delay after reset
     
-    lcd_write_command(ILI9488_SLPOUT);     // Sleep out
-    sleep_ms(150);                         // Longer delay after sleep out
+    writeCommand(ILI9488_SLPOUT);     // Sleep out
+    sleep_ms(150);                    // Longer delay after sleep out
     
     // Power control settings
-    lcd_write_command(0xC0);               // Power Control 1
-    lcd_write_data(0x0E);
-    lcd_write_data(0x0E);
+    writeCommand(0xC0);               // Power Control 1
+    writeData(0x0E);
+    writeData(0x0E);
     
-    lcd_write_command(0xC1);               // Power Control 2
-    lcd_write_data(0x41);
-    lcd_write_data(0x00);
+    writeCommand(0xC1);               // Power Control 2
+    writeData(0x41);
+    writeData(0x00);
     
-    lcd_write_command(0xC5);               // VCOM Control
-    lcd_write_data(0x00);
-    lcd_write_data(0x22);
-    lcd_write_data(0x80);
+    writeCommand(0xC5);               // VCOM Control
+    writeData(0x00);
+    writeData(0x22);
+    writeData(0x80);
     
-    // Enhanced color and contrast settings
-    lcd_write_command(0xE0);               // Positive Gamma Control
-    lcd_write_data(0x00);
-    lcd_write_data(0x07);
-    lcd_write_data(0x0F);
-    lcd_write_data(0x0D);
-    lcd_write_data(0x1B);
-    lcd_write_data(0x0A);
-    lcd_write_data(0x3C);
-    lcd_write_data(0x78);
-    lcd_write_data(0x4A);
-    lcd_write_data(0x07);
-    lcd_write_data(0x0E);
-    lcd_write_data(0x09);
-    lcd_write_data(0x1B);
-    lcd_write_data(0x1E);
-    lcd_write_data(0x0F);
+    // Adjusted gamma settings to reduce purple tint
+    writeCommand(0xE0);               // Positive Gamma Control
+    writeData(0x00);
+    writeData(0x09);                  // Increased from 0x07 to reduce purple
+    writeData(0x0F);
+    writeData(0x0D);
+    writeData(0x1B);
+    writeData(0x0A);
+    writeData(0x3C);
+    writeData(0x78);
+    writeData(0x4A);
+    writeData(0x07);
+    writeData(0x0E);
+    writeData(0x09);
+    writeData(0x1B);
+    writeData(0x1E);
+    writeData(0x0F);
     
-    lcd_write_command(0xE1);               // Negative Gamma Control
-    lcd_write_data(0x00);
-    lcd_write_data(0x22);
-    lcd_write_data(0x24);
-    lcd_write_data(0x06);
-    lcd_write_data(0x12);
-    lcd_write_data(0x07);
-    lcd_write_data(0x36);
-    lcd_write_data(0x47);
-    lcd_write_data(0x47);
-    lcd_write_data(0x06);
-    lcd_write_data(0x0A);
-    lcd_write_data(0x07);
-    lcd_write_data(0x30);
-    lcd_write_data(0x37);
-    lcd_write_data(0x0F);
+    writeCommand(0xE1);               // Negative Gamma Control
+    writeData(0x00);
+    writeData(0x22);
+    writeData(0x24);
+    writeData(0x06);
+    writeData(0x12);
+    writeData(0x07);
+    writeData(0x36);
+    writeData(0x47);
+    writeData(0x47);
+    writeData(0x06);
+    writeData(0x0A);
+    writeData(0x07);
+    writeData(0x30);
+    writeData(0x37);
+    writeData(0x0F);
     
     // Set default rotation (0 degrees)
-    lcd_set_rotation(LCD_ROTATION_0);
+    setRotation(LCD_ROTATION_0);
     
     // Set default contrast
-    lcd_set_contrast(0xC0);  // Higher contrast for better blacks
+    setContrast(0xC0);  // Higher contrast for better blacks
     
-    lcd_write_command(ILI9488_COLMOD);     // Interface Pixel Format
-    lcd_write_data(0x55);                  // 16 bits per pixel
+    writeCommand(ILI9488_COLMOD);     // Interface Pixel Format
+    writeData(0x55);                  // 16 bits per pixel
     
     // Additional settings for stability
-    lcd_write_command(0xB0);               // Interface Mode Control
-    lcd_write_data(0x00);
+    writeCommand(0xB0);               // Interface Mode Control
+    writeData(0x00);
     
-    lcd_write_command(0xB1);               // Frame Rate Control
-    lcd_write_data(0xA0);                  // 60Hz
+    writeCommand(0xB1);               // Frame Rate Control
+    writeData(0xA0);                  // 60Hz
     
-    lcd_write_command(0xB4);               // Display Inversion Control
-    lcd_write_data(0x02);                  // 2-dot inversion
+    writeCommand(0xB4);               // Display Inversion Control
+    writeData(0x02);                  // 2-dot inversion
     
-    lcd_write_command(0xB6);               // Display Function Control
-    lcd_write_data(0x02);
-    lcd_write_data(0x02);
-    lcd_write_data(0x3B);
+    writeCommand(0xB6);               // Display Function Control
+    writeData(0x02);
+    writeData(0x02);
+    writeData(0x3B);
     
-    lcd_write_command(ILI9488_DISPON);     // Display On
-    sleep_ms(150);                         // Longer delay after display on
+    writeCommand(ILI9488_DISPON);     // Display On
+    sleep_ms(150);                    // Longer delay after display on
     
     // Now increase SPI speed to operational speed
-    spi_set_baudrate(SPI_PORT, SPI_SPEED);
+    spi_set_baudrate(SPI_PORT == 0 ? spi0 : spi1, SPI_SPEED);
     
     // Turn on backlight only after display is fully initialized
     sleep_ms(50);
@@ -169,111 +136,105 @@ void lcd_init() {
 }
 
 // Set display contrast and gamma
-void lcd_set_contrast(uint8_t contrast) {
+void LCD::setContrast(uint8_t contrast) {
     // Set VCOM control for contrast
-    lcd_write_command(0xC5);               // VCOM Control
-    lcd_write_data(0x00);                  // First parameter
-    lcd_write_data(contrast);              // Contrast value (higher = more contrast)
-    lcd_write_data(0x80);                  // Third parameter
+    writeCommand(0xC5);               // VCOM Control
+    writeData(0x00);                  // First parameter
+    writeData(contrast);              // Contrast value (higher = more contrast)
+    writeData(0x80);                  // Third parameter
     
-    // Adjust gamma for better black levels
-    lcd_write_command(0xF2);               // Enable Gamma
-    lcd_write_data(0x01);                  // Enable gamma adjustment
+    // Adjust gamma for better black levels and reduced purple tint
+    writeCommand(0xF2);               // Enable Gamma
+    writeData(0x01);                  // Enable gamma adjustment
     
     // Set display inversion for better color reproduction
-    lcd_write_command(0xB4);               // Display Inversion Control
-    lcd_write_data(0x01);                  // 1-dot inversion for better blacks
+    writeCommand(0xB4);               // Display Inversion Control
+    writeData(0x01);                  // 1-dot inversion for better blacks
+    
+    // Additional settings to reduce purple tint and shadow
+    writeCommand(0xC7);               // VCOM Offset Control
+    writeData(0xC0);                  // Adjusted to reduce purple tint
 }
 
 // Set the display rotation
-void lcd_set_rotation(uint8_t rotation) {
-    current_rotation = rotation % 4;
+void LCD::setRotation(uint8_t rotation) {
+    currentRotation = rotation % 4;
     
-    lcd_write_command(ILI9488_MADCTL);     // Memory Access Control
+    writeCommand(ILI9488_MADCTL);     // Memory Access Control
     
-    switch (current_rotation) {
+    switch (currentRotation) {
         case LCD_ROTATION_0:
             // Normal orientation (0 degrees)
-            lcd_write_data(MADCTL_MX | MADCTL_BGR);  // Add MX to fix mirroring
+            writeData(MADCTL_MX | MADCTL_BGR);  // Add MX to fix mirroring
             break;
         case LCD_ROTATION_90:
             // 90 degrees clockwise
-            lcd_write_data(MADCTL_MV | MADCTL_MY | MADCTL_BGR);
+            writeData(MADCTL_MV | MADCTL_MY | MADCTL_BGR);
             break;
         case LCD_ROTATION_180:
             // 180 degrees
-            lcd_write_data(MADCTL_MY | MADCTL_BGR);
+            writeData(MADCTL_MY | MADCTL_BGR);
             break;
         case LCD_ROTATION_270:
             // 270 degrees clockwise
-            lcd_write_data(MADCTL_MV | MADCTL_MX | MADCTL_BGR);
+            writeData(MADCTL_MV | MADCTL_MX | MADCTL_BGR);
             break;
     }
 }
 
 // Clear the screen with specified color
-void lcd_clear(uint16_t color) {
-    lcd_set_window(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+void LCD::clear(uint16_t color) {
+    setWindow(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     
     gpio_put(PIN_DC, 1);  // Data mode
     gpio_put(PIN_CS, 0);  // Select display
     
     // Fill the screen with the specified color
     for (int i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++) {
-        lcd_write_data_16bit(color);
+        writeData16Bit(color);
     }
     
     gpio_put(PIN_CS, 1);  // Deselect display
 }
 
-// Draw a string at the specified position
-void lcd_draw_string(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg_color) {
-    uint16_t posX = x;
-    
-    while (*str) {
-        lcd_draw_char(posX, y, *str, color, bg_color);
-        posX += 6; // 5 pixels for character + 1 pixel spacing
-        str++;
-    }
-}
 
 // Draw a string at the specified position with scaling
-void lcd_draw_string_scaled(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg_color, uint8_t scale) {
+void LCD::drawString(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg_color, uint8_t scale) {
     if (scale < 1) scale = 1;
     
     uint16_t posX = x;
     
     while (*str) {
-        lcd_draw_char_scaled(posX, y, *str, color, bg_color, scale);
+        drawChar(posX, y, *str, color, bg_color, scale);
         posX += (5 * scale) + scale; // 5 pixels for character + 1 pixel spacing, all scaled
         str++;
     }
 }
 
-// Internal functions
+// Internal methods
 
 // Send a command to the display
-static void lcd_write_command(uint8_t cmd) {
+void LCD::writeCommand(uint8_t cmd) {
     gpio_put(PIN_DC, 0);  // Command mode
     gpio_put(PIN_CS, 0);  // Select display
     
-    spi_write_blocking(SPI_PORT, &cmd, 1);
+    spi_write_blocking(SPI_PORT == 0 ? spi0 : spi1, &cmd, 1);
     
     gpio_put(PIN_CS, 1);  // Deselect display
 }
 
 // Send data to the display
-static void lcd_write_data(uint8_t data) {
+void LCD::writeData(uint8_t data) {
     gpio_put(PIN_DC, 1);  // Data mode
     gpio_put(PIN_CS, 0);  // Select display
     
-    spi_write_blocking(SPI_PORT, &data, 1);
+    spi_write_blocking(SPI_PORT == 0 ? spi0 : spi1, &data, 1);
     
     gpio_put(PIN_CS, 1);  // Deselect display
 }
 
 // Send 16-bit data to the display
-static void lcd_write_data_16bit(uint16_t data) {
+void LCD::writeData16Bit(uint16_t data) {
     uint8_t data_bytes[2];
     data_bytes[0] = (data >> 8) & 0xFF;  // High byte
     data_bytes[1] = data & 0xFF;         // Low byte
@@ -281,77 +242,92 @@ static void lcd_write_data_16bit(uint16_t data) {
     gpio_put(PIN_DC, 1);  // Data mode
     gpio_put(PIN_CS, 0);  // Select display
     
-    spi_write_blocking(SPI_PORT, data_bytes, 2);
+    spi_write_blocking(SPI_PORT == 0 ? spi0 : spi1, data_bytes, 2);
     
     gpio_put(PIN_CS, 1);  // Deselect display
 }
 
 // Set the drawing window
-static void lcd_set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+void LCD::setWindow(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
     // Set column address
-    lcd_write_command(ILI9488_CASET);
-    lcd_write_data(x1 >> 8);
-    lcd_write_data(x1 & 0xFF);
-    lcd_write_data(x2 >> 8);
-    lcd_write_data(x2 & 0xFF);
+    writeCommand(ILI9488_CASET);
+    writeData(x1 >> 8);
+    writeData(x1 & 0xFF);
+    writeData(x2 >> 8);
+    writeData(x2 & 0xFF);
     
     // Set row address
-    lcd_write_command(ILI9488_PASET);
-    lcd_write_data(y1 >> 8);
-    lcd_write_data(y1 & 0xFF);
-    lcd_write_data(y2 >> 8);
-    lcd_write_data(y2 & 0xFF);
+    writeCommand(ILI9488_PASET);
+    writeData(y1 >> 8);
+    writeData(y1 & 0xFF);
+    writeData(y2 >> 8);
+    writeData(y2 & 0xFF);
     
     // Write to RAM
-    lcd_write_command(ILI9488_RAMWR);
+    writeCommand(ILI9488_RAMWR);
 }
 
 // Draw a single pixel
-static void lcd_draw_pixel(uint16_t x, uint16_t y, uint16_t color) {
+void LCD::drawPixel(uint16_t x, uint16_t y, uint16_t color) {
     if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
     
-    lcd_set_window(x, y, x, y);
-    lcd_write_data_16bit(color);
+    setWindow(x, y, x, y);
+    writeData16Bit(color);
 }
 
-// Draw a character
-static void lcd_draw_char(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg_color) {
-    if (ch < ' ' || ch > '~') ch = '?';  // Handle only printable ASCII
-    
-    // Get the character index in the font array
-    ch -= ' ';
-    
-    // Draw the character pixel by pixel
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 5; col++) {
-            uint8_t pixel = font5x7[ch * 5 + col] & (1 << row);
-            if (pixel) {
-                lcd_draw_pixel(x + col, y + row, color);
-            } else {
-                lcd_draw_pixel(x + col, y + row, bg_color);
-            }
+void LCD::drawLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color) {
+    // Bresenham's line algorithm
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+    int err = dx - dy;
+
+    while (true) {
+        drawPixel(x1, y1, color);  // Draw pixel
+
+        if (x1 == x2 && y1 == y2) break;  // End of line
+
+        int err2 = err * 2;
+        if (err2 > -dy) {
+            err -= dy;
+            x1 += sx;
+        }
+        if (err2 < dx) {
+            err += dx;
+            y1 += sy;
         }
     }
 }
 
-// Draw a character with scaling
-static void lcd_draw_char_scaled(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg_color, uint8_t scale) {
-    if (ch < ' ' || ch > '~') ch = '?';  // Handle only printable ASCII
+void LCD::drawChar(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg_color, uint8_t scale) {
+    int width = 5;
+    int height = 7;
+    const unsigned char *font = font5x7;
+    
     if (scale < 1) scale = 1;
-    
-    // Get the character index in the font array
-    ch -= ' ';
-    
-    // Draw the character pixel by pixel with scaling
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 5; col++) {
-            uint8_t pixel = font5x7[ch * 5 + col] & (1 << row);
+
+    // if (scale  == 2) {
+    //     font = font10x14;
+    //     width = 10;
+    //     height = 14;
+    //     scale = 1;
+    // }
+
+    // Valid range check: allow up to your custom symbol
+    if (ch < ' ' || ch > 127) ch = '?';
+
+    // Get character index in font array
+    uint16_t index = (ch - ' ') * width;
+
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            bool pixel = (font[index + col] >> row) & 0x01;
             uint16_t pixelColor = pixel ? color : bg_color;
-            
-            // Draw a scaled pixel (scale x scale square)
-            for (int y_scale = 0; y_scale < scale; y_scale++) {
-                for (int x_scale = 0; x_scale < scale; x_scale++) {
-                    lcd_draw_pixel(x + (col * scale) + x_scale, y + (row * scale) + y_scale, pixelColor);
+
+            for (int ys = 0; ys < scale; ys++) {
+                for (int xs = 0; xs < scale; xs++) {
+                    drawPixel(x + col * scale + xs, y + row * scale + ys, pixelColor);
                 }
             }
         }
