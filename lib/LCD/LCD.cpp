@@ -1,6 +1,5 @@
 #include "LCD.h"
 #include "font5x7.h"
-#include "font10x14.h"
 #include "math.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
@@ -15,7 +14,7 @@ LCD::LCD() : currentRotation(0) {
 // Initialize the LCD
 void LCD::init() {
     // Initialize SPI at a lower speed initially for stability
-    spi_init(SPI_PORT == 0 ? spi0 : spi1, 1000000); // Start at 1 MHz for initialization
+    spi_init(SPI_PORT == 0 ? spi0 : spi1, SPI_SPEED); // Start at 1 MHz for initialization
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
     
@@ -198,19 +197,6 @@ void LCD::clear(uint16_t color) {
 }
 
 
-// Draw a string at the specified position with scaling
-void LCD::drawString(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg_color, uint8_t scale) {
-    if (scale < 1) scale = 1;
-    
-    uint16_t posX = x;
-    
-    while (*str) {
-        drawChar(posX, y, *str, color, bg_color, scale);
-        posX += (5 * scale) + scale; // 5 pixels for character + 1 pixel spacing, all scaled
-        str++;
-    }
-}
-
 // Internal methods
 
 // Send a command to the display
@@ -307,13 +293,6 @@ void LCD::drawChar(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg_
     
     if (scale < 1) scale = 1;
 
-    // if (scale  == 2) {
-    //     font = font10x14;
-    //     width = 10;
-    //     height = 14;
-    //     scale = 1;
-    // }
-
     // Valid range check: allow up to your custom symbol
     if (ch < ' ' || ch > 127) ch = '?';
 
@@ -331,5 +310,48 @@ void LCD::drawChar(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg_
                 }
             }
         }
+    }
+}
+
+// void LCD::drawChar(uint16_t x, uint16_t y, char ch, const Font& font, uint16_t color, uint16_t bg_color, uint8_t scale) {
+//     if (scale < 1) scale = 1;
+
+//     // Valid character check
+//     if (ch < font.firstChar || ch > font.lastChar) ch = '?';
+
+//     uint16_t index = (ch - font.firstChar) * font.width;
+
+//     for (int row = 0; row < font.height; row++) {
+//         for (int col = 0; col < font.width; col++) {
+//             bool pixel = (font.data[index + col] >> row) & 0x01;
+//             uint16_t pixelColor = pixel ? color : bg_color;
+
+//             for (int ys = 0; ys < scale; ys++) {
+//                 for (int xs = 0; xs < scale; xs++) {
+//                     drawPixel(x + col * scale + xs, y + row * scale + ys, pixelColor);
+//                 }
+//             }
+//         }
+//     }
+// }
+
+// Draw a string at the specified position with scaling
+void LCD::drawString(
+    uint16_t x,
+    uint16_t y,
+    const char *str,
+    uint16_t color,
+    uint16_t bg_color,
+
+    uint8_t scale
+) {
+    if (scale < 1) scale = 1;
+    
+    uint16_t posX = x;
+    
+    while (*str) {
+        drawChar(posX, y, *str, color, bg_color, scale);
+        posX += (5 * scale) + scale; // 5 pixels for character + 1 pixel spacing, all scaled
+        str++;
     }
 }

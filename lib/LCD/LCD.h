@@ -62,7 +62,8 @@ public:
 private:
     // SPI Configuration
     static const uint32_t SPI_PORT = 1;  // spi1
-    static const uint32_t SPI_SPEED = 10000000; // 10 MHz
+    // static const uint32_t SPI_SPEED = 10000000; // 10 MHz
+    static const uint32_t SPI_SPEED = 50000000; // 50 MHz
     static const uint8_t PIN_SCK = 10;
     static const uint8_t PIN_MOSI = 11;
     static const uint8_t PIN_MISO = 12;
