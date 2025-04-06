@@ -14,7 +14,7 @@ LCD::LCD() : currentRotation(0) {
 // Initialize the LCD
 void LCD::init() {
     // Initialize SPI at a lower speed initially for stability
-    spi_init(SPI_PORT == 0 ? spi0 : spi1, SPI_SPEED); // Start at 1 MHz for initialization
+    spi_init(SPI_PORT == 0 ? spi0 : spi1, 1000000); // Start at 1 MHz for initialization
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
     
@@ -105,7 +105,7 @@ void LCD::init() {
     // Set default contrast
     setContrast(0xC0);  // Higher contrast for better blacks
     
-    writeCommand(ILI9488_COLMOD);     // Interface Pixel Format
+    writeCommand(0x3A);     // Interface Pixel Format (0x3A is the command for ILI9488_COLMOD)
     writeData(0x55);                  // 16 bits per pixel
     
     // Additional settings for stability
