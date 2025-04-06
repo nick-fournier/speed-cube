@@ -47,7 +47,8 @@ pico_enable_stdio_usb(speed-cube 1)
 
 # Add the standard library to the build
 target_link_libraries(speed-cube
-        pico_stdlib)
+        pico_stdlib
+        )
 
 # Add the standard include files to the build
 target_include_directories(speed-cube PRIVATE

@@ -2,9 +2,23 @@
 #define LCD_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 // Display configuration for Waveshare Pico-ResTouch-LCD-3.5
 // Display uses ILI9488 controller with SPI interface
+
+
+#define SPI_PORT spi1
+// SPI Configuration
+#define SPI_SPEED 50000000 // Start at 1 MHz for initialization
+#define PIN_SCK 10
+#define PIN_MOSI 11
+#define PIN_MISO 12
+#define PIN_CS 9
+#define PIN_DC 8
+#define PIN_RST 15
+#define PIN_BL 13
+
 
 // Display dimensions
 #define LCD_WIDTH  320
@@ -18,7 +32,7 @@
 
 // Colors (RGB565 format)
 // True black (0,0,0)
-#define COLOR_BLACK   0xFFFF
+#define COLOR_BLACK   0x0000
 // Deep blue (0,0,31)
 #define COLOR_BLUE    0x001F
 // Pure red (31,0,0)
@@ -26,7 +40,7 @@
 // Pure green (0,63,0)
 #define COLOR_GREEN   0x07E0
 // Pure white (31,63,31)
-#define COLOR_WHITE   0x0000
+#define COLOR_WHITE   0xFFFF
 // Yellow (31,63,0)
 #define COLOR_YELLOW  0xFFE0
 // Gray (16,32,16)
@@ -61,16 +75,16 @@ public:
 
 private:
     // SPI Configuration
-    static const uint32_t SPI_PORT = 1;  // spi1
+    // static const uint32_t SPI_PORT = 1;  // spi1
     // static const uint32_t SPI_SPEED = 10000000; // 10 MHz
-    static const uint32_t SPI_SPEED = 50000000; // 50 MHz
-    static const uint8_t PIN_SCK = 10;
-    static const uint8_t PIN_MOSI = 11;
-    static const uint8_t PIN_MISO = 12;
-    static const uint8_t PIN_CS = 9;
-    static const uint8_t PIN_DC = 8;
-    static const uint8_t PIN_RST = 15;
-    static const uint8_t PIN_BL = 13;
+    // static const uint32_t SPI_SPEED = 50000000; // 50 MHz
+    // static const uint8_t PIN_SCK = 10;
+    // static const uint8_t PIN_MOSI = 11;
+    // static const uint8_t PIN_MISO = 12;
+    // static const uint8_t PIN_CS = 9;
+    // static const uint8_t PIN_DC = 8;
+    // static const uint8_t PIN_RST = 15;
+    // static const uint8_t PIN_BL = 13;
     
     // ILI9488 Commands
     static const uint8_t ILI9488_SWRESET = 0x01;
@@ -94,6 +108,7 @@ private:
     uint8_t currentRotation;
     
     // Internal methods
+    void sendBufferDMA(const uint8_t *buf, size_t len);
     void writeCommand(uint8_t cmd);
     void writeData(uint8_t data);
     void writeData16Bit(uint16_t data);

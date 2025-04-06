@@ -19,6 +19,7 @@ target_link_libraries(LCD PUBLIC
     pico_stdlib
     hardware_spi
     hardware_gpio
+    hardware_dma
 )
 
 # Set C++ standard

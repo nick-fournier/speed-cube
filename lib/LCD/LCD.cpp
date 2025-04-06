@@ -4,7 +4,11 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "hardware/gpio.h"
+#include "hardware/dma.h"
 
+
+
+int dma_chan;
 
 // Constructor
 LCD::LCD() : currentRotation(0) {
@@ -13,8 +17,10 @@ LCD::LCD() : currentRotation(0) {
 
 // Initialize the LCD
 void LCD::init() {
+    dma_chan = dma_claim_unused_channel(true);
+
     // Initialize SPI at a lower speed initially for stability
-    spi_init(SPI_PORT == 0 ? spi0 : spi1, 1000000); // Start at 1 MHz for initialization
+    spi_init(SPI_PORT, 1000000); // Start at 1 MHz for initialization
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
     
@@ -127,11 +133,12 @@ void LCD::init() {
     sleep_ms(150);                    // Longer delay after display on
     
     // Now increase SPI speed to operational speed
-    spi_set_baudrate(SPI_PORT == 0 ? spi0 : spi1, SPI_SPEED);
+    spi_set_baudrate(SPI_PORT, SPI_SPEED);
     
     // Turn on backlight only after display is fully initialized
     sleep_ms(50);
     gpio_put(PIN_BL, 1);
+    
 }
 
 // Set display contrast and gamma
@@ -199,13 +206,33 @@ void LCD::clear(uint16_t color) {
 
 // Internal methods
 
+void LCD::sendBufferDMA(const uint8_t *buf, size_t len) {
+    dma_channel_config c = dma_channel_get_default_config(dma_chan);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
+    channel_config_set_read_increment(&c, true);
+    channel_config_set_write_increment(&c, false);
+    channel_config_set_dreq(&c, spi_get_index(SPI_PORT) ? DREQ_SPI1_TX : DREQ_SPI0_TX);
+
+    dma_channel_configure(
+        dma_chan,
+        &c,
+        &spi_get_hw(SPI_PORT)->dr,  // write to SPI TX FIFO
+        buf,                        // from buffer
+        len,
+        true                        // start immediately
+    );
+
+    dma_channel_wait_for_finish_blocking(dma_chan);
+}
+
 // Send a command to the display
 void LCD::writeCommand(uint8_t cmd) {
     gpio_put(PIN_DC, 0);  // Command mode
     gpio_put(PIN_CS, 0);  // Select display
     
-    spi_write_blocking(SPI_PORT == 0 ? spi0 : spi1, &cmd, 1);
-    
+    // Send command using SPI
+    spi_write_blocking(SPI_PORT, &cmd, 1);
+
     gpio_put(PIN_CS, 1);  // Deselect display
 }
 
@@ -214,7 +241,7 @@ void LCD::writeData(uint8_t data) {
     gpio_put(PIN_DC, 1);  // Data mode
     gpio_put(PIN_CS, 0);  // Select display
     
-    spi_write_blocking(SPI_PORT == 0 ? spi0 : spi1, &data, 1);
+    spi_write_blocking(SPI_PORT, &data, 1);
     
     gpio_put(PIN_CS, 1);  // Deselect display
 }
@@ -228,7 +255,7 @@ void LCD::writeData16Bit(uint16_t data) {
     gpio_put(PIN_DC, 1);  // Data mode
     gpio_put(PIN_CS, 0);  // Select display
     
-    spi_write_blocking(SPI_PORT == 0 ? spi0 : spi1, data_bytes, 2);
+    spi_write_blocking(SPI_PORT, data_bytes, 2);
     
     gpio_put(PIN_CS, 1);  // Deselect display
 }
