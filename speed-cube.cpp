@@ -14,7 +14,6 @@ extern "C" {
 
 
 L76B l76b;
-// LCD lcd;
 
 // Core 1 function: GPS processing
 void core1_main() {
@@ -77,20 +76,17 @@ int main() {
             (int)(fmod(data.time, 100))
         );
 
-        GUI_DisString_EN(180, 0, timestamp, &Font24, LCD_BACKGROUND, WHITE);
-        // lcd.drawString(220, 0, timestamp, COLOR_WHITE, COLOR_BLACK, 2);
+        GUI_DisString_EN(180, 0, timestamp, &Font24, BLACK, WHITE);
 
         // Print speed under SOG
         char speedStr[20];
         snprintf(speedStr, sizeof(speedStr), "%.2f", data.speed);
         GUI_DisString_EN(20, 40, speedStr, &Font24, LCD_BACKGROUND, WHITE);
-        // lcd.drawString(20, 40, speedStr, COLOR_WHITE, COLOR_BLACK, 4);
         
         // Print heading under speed
         char headingStr[20];
         snprintf(headingStr, sizeof(headingStr), "%.2f", data.heading);
         GUI_DisString_EN(20, 140, headingStr, &Font24, LCD_BACKGROUND, WHITE);
-        // lcd.drawString(20, 140, headingStr, COLOR_WHITE, COLOR_BLACK, 4);
 
         sleep_ms(1000);
     }
