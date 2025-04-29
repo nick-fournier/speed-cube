@@ -48,12 +48,13 @@ int main() {
     
     GUI_DisString_EN(20, 20, "SOG", &Font24, LCD_BACKGROUND, WHITE);
     GUI_DisString_EN(120, 30, "kts", &Font24, LCD_BACKGROUND, WHITE);
+    GUI_DisString_EN(20, 60, "VMG", &Font24, LCD_BACKGROUND, WHITE);
+    GUI_DisString_EN(120, 280, "kts", &Font24, LCD_BACKGROUND, WHITE);
+    
     GUI_DisString_EN(20, 120, "Heading", &Font24, LCD_BACKGROUND, WHITE);
     GUI_DrawLine(0, 200, 320, 200, WHITE, LINE_SOLID, DOT_PIXEL_1X1);
     
 
-    GUI_DisString_EN(20, 260, "VMG", &Font24, LCD_BACKGROUND, WHITE);
-    GUI_DisString_EN(120, 280, "kts", &Font24, LCD_BACKGROUND, WHITE);
     GUI_DisString_EN(20, 360, "Wind Angle", &Font24, LCD_BACKGROUND, WHITE);
 
     while (true) {
