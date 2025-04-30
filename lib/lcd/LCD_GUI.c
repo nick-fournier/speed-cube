@@ -170,6 +170,59 @@ void GUI_DrawRectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend,
 }
 
 /******************************************************************************
+ * function:	Draw a triangle
+ * parameter:
+ * x0, y0, x1, y1, x2, y2 : Triangle vertex coordinates
+ * Color                : The color of the triangle
+ * Dot_Pixel           : The size of the triangle
+ * note:
+/******************************************************************************/
+void GUI_DrawTriangle(POINT x0, POINT y0, POINT x1, POINT y1, POINT x2, POINT y2,
+    COLOR Color, DOT_PIXEL Dot_Pixel, DRAW_FILL Filled) {
+    // Check if the points are within the display range
+    if (x0 > sLCD_DIS.LCD_Dis_Column || y0 > sLCD_DIS.LCD_Dis_Page ||
+        x1 > sLCD_DIS.LCD_Dis_Column || y1 > sLCD_DIS.LCD_Dis_Page ||
+        x2 > sLCD_DIS.LCD_Dis_Column || y2 > sLCD_DIS.LCD_Dis_Page) {
+        return;
+    }
+
+    if (!Filled) {
+        // Outline only
+        GUI_DrawLine(x0, y0, x1, y1, Color, LINE_SOLID, Dot_Pixel);
+        GUI_DrawLine(x1, y1, x2, y2, Color, LINE_SOLID, Dot_Pixel);
+        GUI_DrawLine(x2, y2, x0, y0, Color, LINE_SOLID, Dot_Pixel);
+        return;
+    }
+
+    // Bounding box
+    int minX = MIN(x0, MIN(x1, x2));
+    int maxX = MAX(x0, MAX(x1, x2));
+    int minY = MIN(y0, MIN(y1, y2));
+    int maxY = MAX(y0, MAX(y1, y2));
+
+    // Compute edge functions
+    int dx01 = x1 - x0, dy01 = y1 - y0;
+    int dx12 = x2 - x1, dy12 = y2 - y1;
+    int dx20 = x0 - x2, dy20 = y0 - y2;
+
+    for (int y = minY; y <= maxY; y++) {
+        for (int x = minX; x <= maxX; x++) {
+            // Edge functions
+            int w0 = (x - x1) * dy12 - (y - y1) * dx12;
+            int w1 = (x - x2) * dy20 - (y - y2) * dx20;
+            int w2 = (x - x0) * dy01 - (y - y0) * dx01;
+
+            // Check if inside triangle (assuming counter-clockwise winding)
+            if (w0 >= 0 && w1 >= 0 && w2 >= 0) {
+                GUI_DrawPoint(x, y, Color, Dot_Pixel, DOT_STYLE_DFT);
+            }
+        }
+    }
+}
+
+
+
+/******************************************************************************
 function:	Use the 8-point method to draw a circle of the
 				specified size at the specified position.
 parameter:
