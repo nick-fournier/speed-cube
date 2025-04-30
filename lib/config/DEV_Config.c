@@ -62,7 +62,7 @@ uint8_t System_Init(void)
 {
 	stdio_init_all();
 	DEV_GPIO_Init();
-	spi_init(SPI_PORT,4000000);
+	spi_init(SPI_PORT,SPI_BAUDRATE);
 	gpio_set_function(LCD_CLK_PIN,GPIO_FUNC_SPI);
 	gpio_set_function(LCD_MOSI_PIN,GPIO_FUNC_SPI);
 	gpio_set_function(LCD_MISO_PIN,GPIO_FUNC_SPI);

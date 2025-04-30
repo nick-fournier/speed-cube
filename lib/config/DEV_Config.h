@@ -33,6 +33,7 @@
 #define SD_CS_PIN		22
 
 #define SPI_PORT		spi1
+#define SPI_BAUDRATE	50 * 1000 * 1000 // 50MHz
 #define  MAX_BMP_FILES  25 
 /*------------------------------------------------------------------------------------------------------*/
 

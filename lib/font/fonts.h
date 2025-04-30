@@ -42,10 +42,10 @@
 /* Max size of bitmap will based on a font24 (17x24) */
 // #define MAX_HEIGHT_FONT         24
 // #define MAX_WIDTH_FONT          17
-// #define OFFSET_BITMAP           54
+#define OFFSET_BITMAP           54
 /* Max size of bitmap based on a font72 ()*/
-#define MAX_HEIGHT_FONT         43
-#define MAX_WIDTH_FONT          32
+#define MAX_HEIGHT_FONT         168
+#define MAX_WIDTH_FONT          87
 
 #ifdef __cplusplus
  extern "C" {
@@ -62,6 +62,9 @@ typedef struct _tFont
   
 } sFONT;
 
+extern sFONT Font144;
+extern sFONT Font120;
+extern sFONT Font96;
 extern sFONT Font72;
 extern sFONT Font48;
 extern sFONT Font36;
