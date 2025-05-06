@@ -20,6 +20,7 @@
 
 #include "LCD_Driver.h"
 #include "fonts.h"
+#include "math.h"
 
 #define LOW_Speed_Show 0
 #define HIGH_Speed_Show 1
@@ -116,6 +117,8 @@ void GUI_DrawLine(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR Colo
 void GUI_DrawRectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR Color, DRAW_FILL Filled , DOT_PIXEL Dot_Pixel );
 void GUI_DrawCircle(POINT X_Center, POINT Y_Center, LENGTH Radius, COLOR Color, DRAW_FILL Draw_Fill , DOT_PIXEL Dot_Pixel );
 void GUI_DrawTriangle(POINT Xtip, POINT Ytip, POINT Xbase1, POINT Ybase1, POINT Xbase2, POINT Ybase2, COLOR Color, DOT_PIXEL Dot_Pixel, DRAW_FILL Filled);
+void GUI_DrawRadialTriangle(float angle_deg, int radius, int centerX, int centerY, int color, int direction);
+void GUI_DrawRadialCircle(float angle_deg, int size, int centerX, int centerY, int radius, int color);
 
 //pic
 void GUI_Disbitmap(POINT Xpoint, POINT Ypoint, const unsigned char *pMap, POINT Width, POINT Height);

@@ -13,7 +13,9 @@
 
 #define PMTK_CMD_COLD_START "$PMTK103*30\r\n"
 #define PMTK_CMD_FULL_COLD_START "$PMTK104*37\r\n"
-#define PMTK_SET_NMEA_UPDATERATE "$PMTK220,100\r\n"
+
+#define PMTK_CMD_BAUDRATE "$PMTK251,115200*1F\r\n"  // Set baud rate to 115200
+#define PMTK_SET_NMEA_UPDATERATE "$PMTK220,200\r\n" // Set update rate to 5Hz (200ms)
 
 
 // Constructor
@@ -30,14 +32,19 @@ void L76B::init() {
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
     uart_set_format(UART_ID, 8, 1, UART_PARITY_NONE);
 
-    // Update baud rate
-    // uart_set_baudrate(UART_ID, BAUD_RATE);
-
     // Full cold start
     // uart_puts(UART_ID, PMTK_CMD_COLD_START);
 
     // Set NMEA update rate
-    // uart_puts(UART_ID, PMTK_SET_NMEA_UPDATERATE);
+    uart_puts(UART_ID, PMTK_SET_NMEA_UPDATERATE);
+
+    // Set baud rate to 115200
+    uart_puts(UART_ID, PMTK_CMD_BAUDRATE);
+    sleep_ms(100);  // Wait for the command to take effect
+
+    // Reinitialize UART with the new baud rate
+    uart_deinit(UART_ID);
+    uart_init(UART_ID, BAUD_RATE);
 
     // Enable UART RX interrupt
     irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
@@ -136,7 +143,7 @@ bool L76B::parse(const char* buffer) {
 
 }
 
-L76B::GPSData L76B::getData() const {
+GPSData L76B::getData() const {
     return Data;
 }
 

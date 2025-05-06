@@ -35,6 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 add_subdirectory(lib/L76B)
+add_subdirectory(lib/navigation)
 add_subdirectory(lib/config)
 add_subdirectory(lib/font)
 add_subdirectory(lib/fatfs)
@@ -57,22 +58,14 @@ target_link_libraries(speed-cube
 # Add the standard include files to the build
 target_include_directories(speed-cube PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
-        ${CMAKE_CURRENT_LIST_DIR}/lib/font
-        ${CMAKE_CURRENT_LIST_DIR}/lib/fatfs
-        ${CMAKE_CURRENT_LIST_DIR}/lib/sdcard
-        ${CMAKE_CURRENT_LIST_DIR}/lib/lcd
         ${CMAKE_CURRENT_LIST_DIR}/lib/L76B
-        ${CMAKE_CURRENT_LIST_DIR}/lib/config
+        ${CMAKE_CURRENT_LIST_DIR}/lib/navigation
 )
 
 # Add any user requested libraries
 target_link_libraries(speed-cube 
         L76B
-        font
-        fatfs
-        sdcard
-        lcd
-        config
+        navigation
         hardware_spi
         hardware_gpio
         pico_multicore

@@ -479,6 +479,72 @@ void GUI_DisGrayMap(POINT Xpoint, POINT Ypoint, const unsigned char *pBmp)
     }
 }
 
+/******************************************************************************
+ * function:	Draw a radial arrow at a given angle and radius from the center
+ * parameter:
+ *      angle_rad : Angle in radians (0 degrees is at the top)
+ *      radius    : Radius from the center to the tip of the arrow
+ *      centerX   : X coordinate of the center of the circle
+ *      centerY   : Y coordinate of the center of the circle
+ *      color     : Color of the arrow
+ *      direction : 1 for outward, -1 for inward
+ * note:
+ * ******************************************************************************/
+void GUI_DrawRadialTriangle(float angle_deg, int radius, int centerX, int centerY, int color, int direction) {
+    float angle_rad = (angle_deg - 90) * M_PI / 180.0; // Adjust for 0 degrees at top
+
+    int outerRadius = (direction == 1) ? radius + 4 : radius - 4; // Tip of arrow (outwards or inwards)
+    int baseRadius  = (direction == 1) ? radius + 20 : radius - 20; // Base of arrow (outwards or inwards)
+
+    // Tip point
+    int tipX = centerX + outerRadius * cos(angle_rad);
+    int tipY = centerY + outerRadius * sin(angle_rad);
+
+    // Base of the stubby arrow (wide and short)
+    float baseAngleOffset = 0.1;  // Wider = bigger number
+    int baseX1 = centerX + baseRadius * cos(angle_rad + baseAngleOffset);
+    int baseY1 = centerY + baseRadius * sin(angle_rad + baseAngleOffset);
+    int baseX2 = centerX + baseRadius * cos(angle_rad - baseAngleOffset);
+    int baseY2 = centerY + baseRadius * sin(angle_rad - baseAngleOffset);
+
+    // Fill in the entire arrow as a triangle
+    GUI_DrawTriangle(
+        tipX, tipY, baseX1, baseY1, baseX2, baseY2, color,
+        DOT_PIXEL_1X1, DRAW_FULL);
+}
+
+/******************************************************************************
+ * function:	Draw a circle offset from the center at a given angle
+ * parameter:
+ *      angle_rad : Angle in radians (0 degrees is at the top)
+ *      size     : Size of the circle (not used)
+ *      centerX  : X coordinate of the center of the circle
+ *      centerY  : Y coordinate of the center of the circle
+ *      radius   : Radius of the circle
+ *      color    : Color of the circle
+ * note:
+ * ******************************************************************************/
+
+void GUI_DrawRadialCircle(float angle_deg, int size, int centerX, int centerY, int radius, int color) {
+    float angle_rad = (angle_deg - 90) * M_PI / 180.0; // Adjust for 0 degrees at top
+    
+    // Calculate the center of the circle
+    int circleCenterX = centerX + radius * cos(angle_rad);
+    int circleCenterY = centerY + radius * sin(angle_rad);
+
+    // Draw the circle at the calculated position
+    GUI_DrawCircle(circleCenterX, circleCenterY, size, color, DRAW_FULL, DOT_PIXEL_1X1);
+}
+
+
+/******************************************************************************
+ * function:	According to the display area adaptive font size
+ * parameter:
+ *       Dx :   X direction Start coordinates
+ *       Dy :   Y direction Start coordinates
+ *       Font :   Pointer to the font structure
+ * note:
+ * ******************************************************************************/
 sFONT *GUI_GetFontSize(POINT Dx, POINT Dy)
 {
     sFONT *Font;
