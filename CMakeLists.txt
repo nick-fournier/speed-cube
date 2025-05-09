@@ -42,6 +42,7 @@ add_subdirectory(lib/fatfs)
 add_subdirectory(lib/sdcard)
 add_subdirectory(lib/lcd)
 add_subdirectory(lib/kalman)
+add_subdirectory(lib/webserver)
 add_executable(speed-cube speed-cube.cpp )
 
 pico_set_program_name(speed-cube "speed-cube")
@@ -54,6 +55,9 @@ pico_enable_stdio_usb(speed-cube 1)
 # Add the standard library to the build
 target_link_libraries(speed-cube
         pico_stdlib
+        hardware_spi
+        hardware_gpio
+        pico_multicore
         )
 
 # Add the standard include files to the build
@@ -67,9 +71,7 @@ target_link_libraries(speed-cube
         L76B
         navigation
         kalman
-        hardware_spi
-        hardware_gpio
-        pico_multicore
+        webserver
         )
 
 pico_add_extra_outputs(speed-cube)
