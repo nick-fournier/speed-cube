@@ -102,7 +102,7 @@ bool L76B::parse(const char* buffer) {
     // <5> Longitude, the format is dddmm.mmmmmmm
     // <6> Longitude hemisphere, E or W (east longitude or west longitude)
     // <7> Ground speed
-    // <8> Ground heading (take true north as the reference datum)
+    // <8> Ground course (take true north as the reference datum)
     // <9> UTC date, the format is ddmmyy (day, month, year)
     // <10> Magnetic declination (000.0~180.0 degrees)
     // <11> Magnetic declination direction, E (east) or W (west)
@@ -119,16 +119,16 @@ bool L76B::parse(const char* buffer) {
         buffer,
         "$GNRMC,%f,%c,%f,%c,%f,%c,%f,%f,%6s",
         &Data.time, 
-        &status,
+        &Data.status,
         &Data.latitude, &lat_hem,
         &Data.longitude, &lon_hem,
         &Data.speed,
-        &Data.heading,
+        &Data.course,
         Data.date
     );
 
     // Ensure all expected values were extracted
-    if (matched < 9 || status != 'A') {  // 'A' means valid fix
+    if (matched < 9 || Data.status != 'A') {  // 'A' means valid fix
         return false;  // Invalid data
     }
 
@@ -137,7 +137,7 @@ bool L76B::parse(const char* buffer) {
     Data.longitude = toDecimalDegrees(Data.longitude, lon_hem);
 
     // Set status to true indicating valid data received
-    status = true;
+    Data.status = true;
     
     return true;
 
@@ -171,6 +171,6 @@ float L76B::Time() const { return Data.time; }
 float L76B::Latitude() const { return Data.latitude; }
 float L76B::Longitude() const { return Data.longitude; }
 float L76B::Speed() const { return Data.speed; }
-float L76B::Heading() const { return Data.heading; }
-bool L76B::Status() const { return status; }
+float L76B::Course() const { return Data.course; }
+bool L76B::Status() const { return Data.status; }
 

@@ -1,12 +1,4 @@
-#include "navigation.h"
-
-extern "C" {
-    #include "DEV_Config.h"
-    #include "LCD_Driver.h"
-    #include "LCD_Touch.h"
-    #include "LCD_GUI.h"
-    #include "LCD_Bmp.h"
-}
+#include "gui.h"
 
 
 NavigationGUI::NavigationGUI() {}
@@ -46,7 +38,7 @@ void NavigationGUI::update(GPSData Data) {
     updateMarkPointer(target_bearing);
 
     // Calculate VMG
-    float vmg = calculateVMG(Data.speed, Data.heading, target_bearing);
+    float vmg = calculateVMG(Data.speed, Data.course, target_bearing);
 
     // Format speed floats as strings
     char speedStr[8];
@@ -70,15 +62,15 @@ void NavigationGUI::update(GPSData Data) {
 
     GUI_DisString_EN(0, 320, timestamp, &Font24, BLACK, WHITE);
     
-    // Print heading under speed
-    // char headingStr[20];
-    // snprintf(headingStr, sizeof(headingStr), "%.2f", data.heading);
-    // GUI_DisString_EN(20, 140, headingStr, &Font24, LCD_BACKGROUND, WHITE);
+    // Print course under speed
+    // char courseStr[20];
+    // snprintf(courseStr, sizeof(courseStr), "%.2f", data.course);
+    // GUI_DisString_EN(20, 140, courseStr, &Font24, LCD_BACKGROUND, WHITE);
 
 
     printf(
-        "Time: %.3f, Lat: %.6f, Lon: %.6f, Speed: %.2f knots, Heading: %.2f°\n",
-        Data.time, Data.latitude, Data.longitude, Data.speed, Data.heading
+        "Time: %.3f, Lat: %.6f, Lon: %.6f, Speed: %.2f knots, Course: %.2f°\n",
+        Data.time, Data.latitude, Data.longitude, Data.speed, Data.course
     );
 }
 
@@ -127,11 +119,11 @@ float NavigationGUI::calculateBearing(float lat1, float lon1, float lat2, float 
 }
 
 // Calculate VMG to mark
-float NavigationGUI::calculateVMG(float speed, float heading, float target_bearing) {
+float NavigationGUI::calculateVMG(float speed, float course, float target_bearing) {
     // Convert degrees to radians
-    float heading_rad = heading * DEG2RAD;
+    float course_rad = course * DEG2RAD;
     float target_bearing_rad = target_bearing * DEG2RAD;
 
     // Calculate VMG
-    return speed * cos(heading_rad - target_bearing_rad);
+    return speed * cos(course_rad - target_bearing_rad);
 }

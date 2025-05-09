@@ -41,6 +41,7 @@ add_subdirectory(lib/font)
 add_subdirectory(lib/fatfs)
 add_subdirectory(lib/sdcard)
 add_subdirectory(lib/lcd)
+add_subdirectory(lib/kalman)
 add_executable(speed-cube speed-cube.cpp )
 
 pico_set_program_name(speed-cube "speed-cube")
@@ -58,14 +59,14 @@ target_link_libraries(speed-cube
 # Add the standard include files to the build
 target_include_directories(speed-cube PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
-        ${CMAKE_CURRENT_LIST_DIR}/lib/L76B
-        ${CMAKE_CURRENT_LIST_DIR}/lib/navigation
+        ${CMAKE_CURRENT_LIST_DIR}/lib
 )
 
 # Add any user requested libraries
 target_link_libraries(speed-cube 
         L76B
         navigation
+        kalman
         hardware_spi
         hardware_gpio
         pico_multicore

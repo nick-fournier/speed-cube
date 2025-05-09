@@ -29,11 +29,15 @@ void KalmanFilter::predict(double dt) {
     double distance = speed * dt;           // meters
     double delta = distance / EARTH_RADIUS; // angular distance
 
-    double new_lat = std::asin(std::sin(lat_rad) * std::cos(delta) +
-                               std::cos(lat_rad) * std::sin(delta) * std::cos(course_rad));
+    double new_lat = std::asin(
+        std::sin(lat_rad) * std::cos(delta) +
+        std::cos(lat_rad) * std::sin(delta) * std::cos(course_rad)
+    );
 
-    double new_lon = lon_rad + std::atan2(std::sin(course_rad) * std::sin(delta) * std::cos(lat_rad),
-                                          std::cos(delta) - std::sin(lat_rad) * std::sin(new_lat));
+    double new_lon = lon_rad + std::atan2(
+        std::sin(course_rad) * std::sin(delta) * std::cos(lat_rad),
+        std::cos(delta) - std::sin(lat_rad) * std::sin(new_lat)
+    );
 
     x(0) = rad2deg(new_lat);
     x(1) = rad2deg(new_lon);
@@ -43,7 +47,9 @@ void KalmanFilter::predict(double dt) {
     P = P + Q;
 }
 
-void KalmanFilter::update(double lat_deg, double lon_deg, double speed_mps, double course_deg) {
+void KalmanFilter::update(
+    double lat_deg, double lon_deg, double speed_mps, double course_deg
+) {
     Eigen::Vector4d z;
     z << lat_deg, lon_deg, speed_mps, course_deg;
 

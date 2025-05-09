@@ -4,10 +4,14 @@
 #include "pico/multicore.h"
 #include "hardware/watchdog.h"
 #include "L76B.h"
-#include "navigation.h"
+#include "kalman.h"
+#include "navigation/gui.h"
+#include "navigation/control.h"
 
 
 L76B l76b;
+KalmanFilter kf;
+NavigationController navCon(l76b, kf);
 NavigationGUI navGui;
 
 // Core 1 function: GPS processing
@@ -33,7 +37,15 @@ int main() {
     // Initialize L76B GPS module
     multicore_launch_core1(core1_main);
 
-    int test_heading = 0;
+    while (true) {
+        navCon.update();
+        if (navCon.hasFix()) {
+            navGui.update(navCon.getDisplayData());
+        } else {
+            printf("Waiting for GPS fix...\n");
+        }
+        sleep_ms(200);  // GUI update rate
+    }
 
     while (true) {
 

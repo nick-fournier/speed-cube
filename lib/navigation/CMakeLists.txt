@@ -7,7 +7,8 @@ add_library(navigation STATIC)
 
 # Specify the source files for the library
 target_sources(navigation PRIVATE
-    navigation.cpp
+    gui.cpp
+    control.cpp
 )
 
 # Include directories for the library
@@ -19,6 +20,8 @@ target_include_directories(navigation PUBLIC
     ${CMAKE_SOURCE_DIR}/lib/fatfs
     ${CMAKE_SOURCE_DIR}/lib/sdcard
     ${CMAKE_SOURCE_DIR}/lib/L76B
+    ${CMAKE_SOURCE_DIR}/lib/kalman
+    ${CMAKE_SOURCE_DIR}/lib/eigen
 )
 
 # Link Pico SDK libraries
@@ -30,6 +33,7 @@ target_link_libraries(navigation PUBLIC
     lcd
     config
     L76B
+    kalman
     hardware_spi
     hardware_gpio
 )

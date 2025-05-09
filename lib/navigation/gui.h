@@ -3,6 +3,14 @@
 #include "L76B.h"
 #include "math.h"
 
+extern "C" {
+    #include "DEV_Config.h"
+    #include "LCD_Driver.h"
+    #include "LCD_Touch.h"
+    #include "LCD_GUI.h"
+    #include "LCD_Bmp.h"
+}
+
 
 // Define constants for navigation calculations
 static constexpr double DEG2RAD = M_PI / 180.0;
@@ -42,7 +50,7 @@ class NavigationGUI {
         float tack_bearing = 0.0;   // Opposing tack bearing in degrees
 
         float calculateBearing(float lat1, float lon1, float lat2, float lon2);
-        float calculateVMG(float speed, float heading, float target_bearing);
+        float calculateVMG(float speed, float course, float target_bearing);
 
         void updateMarkPointer(float bearing_deg);
         void updateTackPointer(float bearing_deg);

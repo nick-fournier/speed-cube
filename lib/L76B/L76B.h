@@ -5,12 +5,13 @@
 
 // Data structure to hold GPS data
 struct GPSData {
-    float time;             // Time in UTC (hhmmss.sss)
-    char date[7];          // Date in UTC (ddmmyy), string of length 6
-    float latitude;         // Latitude in decimal degrees
-    float longitude;  // Longitude in decimal degrees
-    float speed;      // Speed in knots
-    float heading;    // Heading in degrees
+    char date[7];       // Date in UTC (ddmmyy), string of length 6
+    float time;         // Time in UTC (hhmmss.sss)
+    float latitude;     // Latitude in decimal degrees
+    float longitude;    // Longitude in decimal degrees
+    float speed;        // Speed in knots
+    float course;       // Course in degrees
+    bool status;
 };
 
 
@@ -28,7 +29,7 @@ public:
     float Latitude() const;
     float Longitude() const;
     float Speed() const;
-    float Heading() const;
+    float Course() const;
     bool Status() const;
 
 private:
@@ -45,7 +46,6 @@ private:
     static inline char rx_buffer[83];
     static inline size_t buffer_index = 0;
     static inline GPSData Data;
-    static inline bool status;
 };
 
 #endif // L76B_H
