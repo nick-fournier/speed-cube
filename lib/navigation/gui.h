@@ -1,6 +1,7 @@
 #ifndef NAVIGATION_H
 #define NAVIGATION_H
 #include "L76B.h"
+#include "gps_data.h"
 #include "math.h"
 
 extern "C" {
@@ -30,11 +31,11 @@ class NavigationGUI {
 
         // Initialization function
         void init();
-        void update(GPSData data);
+        void update(GPSFix data);
 
     
     private:
-        GPSData Data;
+        GPSFix Data;
 
         // Params
         int centerX = 160;  // Center X coordinate of the display

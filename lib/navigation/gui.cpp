@@ -26,11 +26,11 @@ void NavigationGUI::init() {
     GUI_DisString_EN(100, 80, "kts (SOG)", &Font20, BLACK, WHITE);    
 }
 
-void NavigationGUI::update(GPSData Data) {
+void NavigationGUI::update(GPSFix Data) {
 
     // Update the current bearing to the target mark
     float target_bearing = calculateBearing(
-        Data.latitude, Data.longitude,
+        Data.lat, Data.lon,
         current_target.lat, current_target.lon
     );
 
@@ -70,7 +70,7 @@ void NavigationGUI::update(GPSData Data) {
 
     printf(
         "Time: %.3f, Lat: %.6f, Lon: %.6f, Speed: %.2f knots, Course: %.2f°\n",
-        Data.time, Data.latitude, Data.longitude, Data.speed, Data.course
+        Data.time, Data.lat, Data.lon, Data.speed, Data.course
     );
 }
 

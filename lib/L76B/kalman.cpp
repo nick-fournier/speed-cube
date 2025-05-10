@@ -20,21 +20,21 @@ KalmanFilter::KalmanFilter() {
     R(3,3) = 3.0;   // course
 }
 
-void KalmanFilter::predict(double dt) {
-    double lat_rad = deg2rad(x(0));
-    double lon_rad = deg2rad(x(1));
-    double speed = x(2); // m/s
-    double course_rad = deg2rad(x(3));
+void KalmanFilter::predict(float dt) {
+    float lat_rad = deg2rad(x(0));
+    float lon_rad = deg2rad(x(1));
+    float speed = x(2); // m/s
+    float course_rad = deg2rad(x(3));
 
-    double distance = speed * dt;           // meters
-    double delta = distance / EARTH_RADIUS; // angular distance
+    float distance = speed * dt;           // meters
+    float delta = distance / EARTH_RADIUS; // angular distance
 
-    double new_lat = std::asin(
+    float new_lat = std::asin(
         std::sin(lat_rad) * std::cos(delta) +
         std::cos(lat_rad) * std::sin(delta) * std::cos(course_rad)
     );
 
-    double new_lon = lon_rad + std::atan2(
+    float new_lon = lon_rad + std::atan2(
         std::sin(course_rad) * std::sin(delta) * std::cos(lat_rad),
         std::cos(delta) - std::sin(lat_rad) * std::sin(new_lat)
     );
@@ -48,7 +48,7 @@ void KalmanFilter::predict(double dt) {
 }
 
 void KalmanFilter::update(
-    double lat_deg, double lon_deg, double speed_mps, double course_deg
+    float lat_deg, float lon_deg, float speed_mps, float course_deg
 ) {
     Eigen::Vector4d z;
     z << lat_deg, lon_deg, speed_mps, course_deg;
@@ -60,26 +60,26 @@ void KalmanFilter::update(
     P = (I - K) * P;
 }
 
-double KalmanFilter::getLatitude() const {
+float KalmanFilter::getLatitude() const {
     return x(0);
 }
 
-double KalmanFilter::getLongitude() const {
+float KalmanFilter::getLongitude() const {
     return x(1);
 }
 
-double KalmanFilter::getSpeed() const {
+float KalmanFilter::getSpeed() const {
     return x(2);
 }
 
-double KalmanFilter::getCourse() const {
+float KalmanFilter::getCourse() const {
     return x(3);
 }
 
-double KalmanFilter::deg2rad(double deg) const {
+float KalmanFilter::deg2rad(float deg) const {
     return deg * M_PI / 180.0;
 }
 
-double KalmanFilter::rad2deg(double rad) const {
+float KalmanFilter::rad2deg(float rad) const {
     return rad * 180.0 / M_PI;
 }

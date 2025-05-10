@@ -4,14 +4,12 @@
 #include "pico/multicore.h"
 #include "hardware/watchdog.h"
 #include "L76B.h"
-#include "kalman.h"
 #include "navigation/gui.h"
-#include "navigation/control.h"
+// #include "webserver.h"
 
 
 L76B l76b;
 KalmanFilter kf;
-NavigationController navCon(l76b, kf);
 NavigationGUI navGui;
 
 // Core 1 function: GPS processing
@@ -37,29 +35,26 @@ int main() {
     // Initialize L76B GPS module
     multicore_launch_core1(core1_main);
 
-    while (true) {
-        navCon.update();
-        if (navCon.hasFix()) {
-            navGui.update(navCon.getDisplayData());
-        } else {
-            printf("Waiting for GPS fix...\n");
-        }
-        sleep_ms(200);  // GUI update rate
+    GPSFix raw_snapshot;
+    GPSFix filtered_snapshot;
+
+    // Read raw GPS data. Comment me out once tuned
+    mutex_enter_blocking(&raw_data_mutex);
+    raw_snapshot = raw_data;
+    mutex_exit(&raw_data_mutex);
+
+    // Read filtered GPS data
+    mutex_enter_blocking(&filtered_mutex);
+    filtered_snapshot = filtered_data;
+    mutex_exit(&filtered_mutex);
+
+    if (filtered_data.status) {
+        navGui.update(raw_snapshot);
+    } else {
+        printf("Waiting for GPS fix...\n");
     }
 
-    while (true) {
-
-        GPSData data = l76b.getData();
-        // If GPS is ready, update the GUI
-        if (l76b.Status()) {
-            navGui.update(data);
-        } else {
-            printf("Waiting for valid GPS data...\n");
-        }
-
-       
-        sleep_ms(200);
-    }
+    sleep_ms(200);  // GUI update rate
     
     return 0;
 }

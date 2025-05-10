@@ -41,8 +41,7 @@ add_subdirectory(lib/font)
 add_subdirectory(lib/fatfs)
 add_subdirectory(lib/sdcard)
 add_subdirectory(lib/lcd)
-add_subdirectory(lib/kalman)
-add_subdirectory(lib/webserver)
+# add_subdirectory(lib/webserver)
 add_executable(speed-cube speed-cube.cpp )
 
 pico_set_program_name(speed-cube "speed-cube")
@@ -70,8 +69,7 @@ target_include_directories(speed-cube PRIVATE
 target_link_libraries(speed-cube 
         L76B
         navigation
-        kalman
-        webserver
+        # webserver
         )
 
 pico_add_extra_outputs(speed-cube)

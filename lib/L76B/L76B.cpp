@@ -19,7 +19,9 @@
 
 
 // Constructor
-L76B::L76B() {}
+L76B::L76B() {
+    instance = this;  // Set the instance for the static method
+}
 
 unsigned long systime() {
     return to_ms_since_boot(get_absolute_time());
@@ -56,6 +58,12 @@ void L76B::init() {
 }
 
 void L76B::on_uart_rx() {
+    if (instance) {
+        instance->handle_uart();
+    }
+}
+
+void L76B::handle_uart() {
 
     // Track start time for timeout
     unsigned long startTime = systime();
@@ -118,33 +126,56 @@ bool L76B::parse(const char* buffer) {
     int matched = sscanf(
         buffer,
         "$GNRMC,%f,%c,%f,%c,%f,%c,%f,%f,%6s",
-        &Data.time, 
-        &Data.status,
-        &Data.latitude, &lat_hem,
-        &Data.longitude, &lon_hem,
-        &Data.speed,
-        &Data.course,
-        Data.date
+        &working_data.time, 
+        &working_data.status,
+        &working_data.lat, &lat_hem,
+        &working_data.lon, &lon_hem,
+        &working_data.speed,
+        &working_data.course,
+        working_data.date
     );
 
     // Ensure all expected values were extracted
-    if (matched < 9 || Data.status != 'A') {  // 'A' means valid fix
+    if (matched < 9 || working_data.status != 'A') {  // 'A' means valid fix
         return false;  // Invalid data
     }
 
     // Convert latitude and longitude to decimal degrees
-    Data.latitude = toDecimalDegrees(Data.latitude, lat_hem);
-    Data.longitude = toDecimalDegrees(Data.longitude, lon_hem);
+    working_data.lat = toDecimalDegrees(working_data.lat, lat_hem);
+    working_data.lon = toDecimalDegrees(working_data.lon, lon_hem);
 
     // Set status to true indicating valid data received
-    Data.status = true;
+    working_data.status = true;
+
+    // Make raw data available for other threads
+    mutex_enter_blocking(&raw_data_mutex);
+    raw_data = working_data;
+    mutex_exit(&raw_data_mutex);
+
+    // Update Kalman filter
+    kf.update(
+        working_data.lat, working_data.lon,
+        working_data.speed, working_data.course
+    );
+
+    // Store filtered output
+    mutex_enter_blocking(&filtered_mutex);
+    filtered_data = {
+        .lat = kf.getLatitude(),
+        .lon = kf.getLongitude(),
+        .speed = kf.getSpeed(),
+        .course = kf.getCourse(),
+        .time = working_data.time,
+        .status = true  // Always valid if filtered
+    };
+    mutex_exit(&filtered_mutex);
     
     return true;
 
 }
 
-GPSData L76B::getData() const {
-    return Data;
+GPSFix L76B::getData() const {
+    return working_data;
 }
 
 float L76B::toDecimalDegrees(
@@ -167,10 +198,10 @@ float L76B::toDecimalDegrees(
 
 }
 
-float L76B::Time() const { return Data.time; }
-float L76B::Latitude() const { return Data.latitude; }
-float L76B::Longitude() const { return Data.longitude; }
-float L76B::Speed() const { return Data.speed; }
-float L76B::Course() const { return Data.course; }
-bool L76B::Status() const { return Data.status; }
+float L76B::Time() const { return working_data.time; }
+float L76B::Latitude() const { return working_data.lat; }
+float L76B::Longitude() const { return working_data.lon; }
+float L76B::Speed() const { return working_data.speed; }
+float L76B::Course() const { return working_data.course; }
+bool L76B::Status() const { return working_data.status; }
 

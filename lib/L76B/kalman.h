@@ -10,13 +10,13 @@ class KalmanFilter {
 public:
     KalmanFilter();
 
-    void predict(double dt);
-    void update(double lat_deg, double lon_deg, double speed_mps, double course_deg);
+    void predict(float dt);
+    void update(float lat_deg, float lon_deg, float speed_mps, float course_deg);
 
-    double getLatitude() const;
-    double getLongitude() const;
-    double getSpeed() const;
-    double getCourse() const;
+    float getLatitude() const;
+    float getLongitude() const;
+    float getSpeed() const;
+    float getCourse() const;
 
 private:
     Eigen::Vector4d x;      // State vector: [lat_deg, lon_deg, speed_mps, course_deg]
@@ -25,8 +25,8 @@ private:
     Eigen::Matrix4d R;      // Measurement noise
     Eigen::Matrix4d I;      // Identity matrix
 
-    double deg2rad(double deg) const;
-    double rad2deg(double rad) const;
+    float deg2rad(float deg) const;
+    float rad2deg(float rad) const;
 };
 
 #endif // KALMAN_H
