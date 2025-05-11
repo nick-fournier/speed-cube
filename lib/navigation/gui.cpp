@@ -67,11 +67,10 @@ void NavigationGUI::update(GPSFix Data) {
     // snprintf(courseStr, sizeof(courseStr), "%.2f", data.course);
     // GUI_DisString_EN(20, 140, courseStr, &Font24, LCD_BACKGROUND, WHITE);
 
-
-    printf(
-        "Time: %.3f, Lat: %.6f, Lon: %.6f, Speed: %.2f knots, Course: %.2f°\n",
-        Data.time, Data.lat, Data.lon, Data.speed, Data.course
-    );
+    // printf(
+    //     "Time: %.3f, Lat: %.6f, Lon: %.6f, Speed: %.2f knots, Course: %.2f°\n",
+    //     Data.time, Data.lat, Data.lon, Data.speed, Data.course
+    // );
 }
 
 void NavigationGUI::updateMarkPointer(float bearing_deg)  {
