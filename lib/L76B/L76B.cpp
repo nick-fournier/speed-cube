@@ -45,12 +45,12 @@ void L76B::init() {
     uart_puts(UART_ID, PMTK_SET_NMEA_UPDATERATE);
 
     // Set baud rate to 115200
-    uart_puts(UART_ID, PMTK_CMD_BAUDRATE);
-    sleep_ms(100);  // Wait for the command to take effect
+    // uart_puts(UART_ID, PMTK_CMD_BAUDRATE);
+    // sleep_ms(100);  // Wait for the command to take effect
 
     // Reinitialize UART with the new baud rate
-    uart_deinit(UART_ID);
-    uart_init(UART_ID, BAUD_RATE);
+    // uart_deinit(UART_ID);
+    // uart_init(UART_ID, BAUD_RATE);
 
     // Enable UART RX interrupt
     irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
@@ -100,10 +100,9 @@ void L76B::handle_uart() {
 
     }
 
-    // printf("Buffer: %s\n", buffer);
 }
 
-bool L76B::parse(const char* buffer) {
+void L76B::parse(const char* buffer) {
     // Example of GNRMC Sentence: 
     // $GNRMC,092204.999,A,5321.6802,N,00630.3372,W,0.06,31.66,280511,,,A*43
     // <0> $GNRMC
@@ -124,33 +123,39 @@ bool L76B::parse(const char* buffer) {
     // <CR> Carriage return, end tag
     // <LF> line feed, end tag
 
-    char lat_hem, lon_hem;
+    char temp[100];
+    strncpy(temp, buffer, sizeof(temp));
+    temp[sizeof(temp) - 1] = '\0';
 
-    // Parse NMEA RMC sentence
-    int matched = sscanf(
-        buffer,
-        "$GNRMC,%f,%c,%f,%c,%f,%c,%f,%f,%6s",
-        &working_data.time, 
-        &working_data.status,
-        &working_data.lat, &lat_hem,
-        &working_data.lon, &lon_hem,
-        &working_data.speed,
-        &working_data.course,
-        working_data.date
-    );
+    char* tokens[13] = {nullptr};
+    int i = 0;
+    char* token = strtok(temp, ",");
 
-    // Ensure all expected values were extracted
-    if (matched < 9 || working_data.status != 'A') {  // 'A' means valid fix
-        return false;  // Invalid data
+    while (token != nullptr && i < 13) {
+        tokens[i++] = token;
+        token = strtok(nullptr, ",");
     }
 
-    // Convert latitude and longitude to decimal degrees
-    working_data.lat = toDecimalDegrees(working_data.lat, lat_hem);
-    working_data.lon = toDecimalDegrees(working_data.lon, lon_hem);
+    if (i < 9 || tokens[2][0] != 'A') {
+        working_data.status = false;
+    }
 
-    // Set status to true indicating valid data received
+    // Set working data
     working_data.status = true;
+    working_data.time = strtof(tokens[1], nullptr);
+    working_data.lat = toDecimalDegrees(strtof(tokens[3], nullptr), tokens[4][0]);
+    working_data.lon = toDecimalDegrees(strtof(tokens[5], nullptr), tokens[6][0]);
+    working_data.speed = strtof(tokens[7], nullptr);
+    working_data.course = strtof(tokens[8], nullptr);
 
+    strncpy(working_data.date, tokens[9], sizeof(working_data.date) - 1);
+    working_data.date[sizeof(working_data.date) - 1] = '\0';
+
+    // Update kalman and share data
+    update();
+}
+
+void L76B::update() {
     // Make raw data available for other threads
     mutex_enter_blocking(&raw_data_mutex);
     raw_data = working_data;
@@ -173,9 +178,6 @@ bool L76B::parse(const char* buffer) {
         .status = true  // Always valid if filtered
     };
     mutex_exit(&filtered_mutex);
-    
-    return true;
-
 }
 
 GPSFix L76B::getData() const {

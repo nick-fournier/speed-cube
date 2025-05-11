@@ -35,7 +35,10 @@ private:
     void handle_uart();
 
     // Helper function to parse $GNRMC NMEA sentence
-    bool parse(const char* nmea);
+    void parse(const char* nmea);
+    
+    // Helper function to update kalman and mutex data
+    void update();
 
     // Helper function to convert NMEA coordinates to decimal degrees
     float toDecimalDegrees(const float& coordinate, const char& hemisphere);
