@@ -28,6 +28,10 @@ unsigned long systime() {
 }
 
 void L76B::init() {
+    // Initialize mutexes before use
+    mutex_init(&raw_data_mutex);
+    mutex_init(&filtered_mutex);
+
     // Initialize UART
     uart_init(UART_ID, BAUD_RATE_DEFAULT);
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
