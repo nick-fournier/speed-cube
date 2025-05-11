@@ -60,9 +60,9 @@ void NavigationGUI::update(GPSFix Data) {
 
     // Show the sign left of the VMG, to keep centered
     if (vmg_sign < 0) {
-        GUI_DisString_EN(60, 70, "-", &Font72, LCD_BACKGROUND, WHITE);
+        GUI_DisString_EN(60, 65, "-", &Font72, LCD_BACKGROUND, WHITE);
     } else {
-        GUI_DisString_EN(60, 70, " ", &Font72, LCD_BACKGROUND, WHITE);
+        GUI_DisString_EN(60, 65, " ", &Font72, LCD_BACKGROUND, WHITE);
     }
 
 

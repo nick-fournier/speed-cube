@@ -34,24 +34,17 @@ int main() {
     mutex_init(&filtered_data_mutex);
     mutex_init(&raw_data_mutex);
 
-    // Initialize Wi-Fi
-    if (cyw43_arch_init_with_country(CYW43_COUNTRY_WORLDWIDE)) {
-        printf("WiFi init failed\n");
-        return -1;
-    }
-
-    // Start Wi-Fi Access Point
-    cyw43_arch_enable_ap_mode("PicoAP", "password123", CYW43_AUTH_WPA2_AES_PSK);
-    printf("Access Point started. Connect to http://192.168.4.1/\n");
-
-    // // Start webserver using filtered data
-    static WebServer webserver(filtered_data, &filtered_data_mutex);
-    webserver.start();
+    // Start webserver using filtered data
+    WebServer server(filtered_data, &filtered_data_mutex);
+    server.start();
 
     navGui.init();
     multicore_launch_core1(core1_main);
 
     while (true) {
+        // Poll the Wi-Fi stack
+        server.poll();
+
         GPSFix raw_snapshot;
         GPSFix filtered_snapshot;
 
@@ -82,9 +75,9 @@ int main() {
             raw_snapshot.speed, raw_snapshot.course);
 
         printf("[FILTERED] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
-                filtered_snapshot.time,
-                filtered_snapshot.lat, filtered_snapshot.lon,
-                filtered_snapshot.speed, filtered_snapshot.course);
+            filtered_snapshot.time,
+            filtered_snapshot.lat, filtered_snapshot.lon,
+            filtered_snapshot.speed, filtered_snapshot.course);
 
         sleep_ms(200);  // GUI + print update rate
     }

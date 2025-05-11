@@ -7,6 +7,8 @@ add_library(webserver STATIC)
 
 # Specify the source files for the library
 target_sources(webserver PRIVATE
+    dhcpserver.c
+    dnsserver.c
     webserver.cpp
 )
 

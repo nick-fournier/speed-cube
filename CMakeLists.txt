@@ -70,6 +70,7 @@ target_link_libraries(speed-cube
         L76B
         navigation
         webserver
+        pico_cyw43_arch_lwip_threadsafe_background
         )
 
 pico_add_extra_outputs(speed-cube)
