@@ -7,7 +7,7 @@
 
 #include "L76B.h"
 #include "navigation/gui.h"
-#include "webserver.h"
+// #include "webserver.h"
 #include "gps_data.h"  // defines externs for filtered/raw data and mutexes
 
 L76B l76b;
@@ -39,9 +39,9 @@ int main() {
     cyw43_arch_enable_ap_mode("PicoAP", "password123", CYW43_AUTH_WPA2_AES_PSK);
     printf("Access Point started. Connect to http://192.168.4.1/\n");
 
-    // Start webserver using filtered data
-    static WebServer webserver(filtered_data, &filtered_mutex);
-    webserver.start();
+    // // Start webserver using filtered data
+    // static WebServer webserver(filtered_data, &filtered_mutex);
+    // webserver.start();
 
     navGui.init();
     multicore_launch_core1(core1_main);
@@ -50,15 +50,18 @@ int main() {
         GPSFix raw_snapshot;
         GPSFix filtered_snapshot;
 
-        // Read raw GPS data
-        mutex_enter_blocking(&raw_data_mutex);
-        raw_snapshot = raw_data;
-        mutex_exit(&raw_data_mutex);
+        // Read working data
+        raw_snapshot = l76b.getData();
 
-        // Read filtered GPS data
-        mutex_enter_blocking(&filtered_mutex);
-        filtered_snapshot = filtered_data;
-        mutex_exit(&filtered_mutex);
+        // // Read raw GPS data
+        // mutex_enter_blocking(&raw_data_mutex);
+        // raw_snapshot = raw_data;
+        // mutex_exit(&raw_data_mutex);
+
+        // // Read filtered GPS data
+        // mutex_enter_blocking(&filtered_mutex);
+        // filtered_snapshot = filtered_data;
+        // mutex_exit(&filtered_mutex);
 
         // Update GUI using raw GPS fix
         if (raw_snapshot.status) {
@@ -68,9 +71,10 @@ int main() {
         }
 
         // Print both to the console for debugging
-        printf("[RAW] lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
-               raw_snapshot.lat, raw_snapshot.lon,
-               raw_snapshot.speed, raw_snapshot.course);
+        printf("[RAW] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
+            raw_snapshot.time,
+            raw_snapshot.lat, raw_snapshot.lon,
+            raw_snapshot.speed, raw_snapshot.course);
 
         printf("[FILTERED] lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
                filtered_snapshot.lat, filtered_snapshot.lon,
