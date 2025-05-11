@@ -1,6 +1,6 @@
 pyenv
 build
-
+.env
 # Prerequisites
 *.d
 

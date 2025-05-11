@@ -5,13 +5,22 @@
 #include "lwip/init.h"
 #include "lwip/timeouts.h"
 #include "lwip/ip4_addr.h"      // for IP4_ADDR
-#include "dhcpserver.h"
-#include "dnsserver.h"
 
 #include <cstdio>
 #include <sstream>
 #include <string>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "dhcpserver.h"
+#include "dnsserver.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 //— a single DHCP and DNS server instance must live for the life of the AP
 static dhcp_server_t dhcp_server;
@@ -68,45 +77,73 @@ static err_t tcp_accept_cb(void* arg, struct tcp_pcb* newpcb, err_t err) {
 // WebServer implementation
 //————————————————————————————————————————————————————————————————————————
 
-WebServer::WebServer(GPSFix& fix, mutex_t* mutex)
-    : context_{ &fix, mutex }
+WebServer::WebServer(GPSFix& fix, mutex_t* m,
+    const char* mode,
+    const char* ssid,
+    const char* pw)
+: context_{ &fix, m }
+, mode_(parse_mode(mode))
+, ssid_(ssid)
+, pw_(pw)
 {}
 
+WifiMode WebServer::parse_mode(const char* mode) {
+    if (strcmp(mode, "AP") == 0) {
+        return WifiMode::AP;
+    } else if (strcmp(mode, "STA") == 0) {
+        return WifiMode::STA;
+    } else {
+        printf("Invalid Wi-Fi mode: %s\n", mode);
+        return WifiMode::AP;  // default to AP
+    }
+}
+
 void WebServer::start() {
-    // 1) init Wi-Fi
+
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_WORLDWIDE)) {
-        printf("WiFi init failed\n");
+        printf("Wi-Fi init failed\n");
         return;
     }
 
-    // 2) bring up AP — this also registers the netif as 192.168.4.1/24
-    cyw43_arch_enable_ap_mode("PicoAP", "password123", CYW43_AUTH_WPA2_AES_PSK);
-    printf("AP mode on 192.168.4.1, SSID=\"PicoAP\"\n");
+    if (mode_ == WifiMode::AP) {
+        printf("Starting AP mode with SSID \"%s\"\n", ssid_);
+        // ————————————————— AP path —————————————————
+        cyw43_arch_enable_ap_mode(ssid_, pw_, CYW43_AUTH_WPA2_AES_PSK);
+        printf("AP mode on 192.168.4.1, SSID=\"%s\"\n", ssid_);
+    
+        // DHCP & DNS servers for clients on our AP
+        ip4_addr_t gw, mask;
+        IP4_ADDR(&gw,   192,168,4,1);
+        IP4_ADDR(&mask,255,255,255,0);
+        dhcp_server_init(&dhcp_server, (ip_addr_t*)&gw, (ip_addr_t*)&mask);
+        dns_server_init(&dns_server,  (ip_addr_t*)&gw);
+    
+    } else {
+        // ————————————————— STA path —————————————————
+        printf("STA mode, connecting to %s\n", ssid_);
+        cyw43_arch_enable_sta_mode();  // switch into station mode :contentReference[oaicite:0]{index=0}
 
-    // 3) start DHCP + DNS on that interface
-    //    netmask is 255.255.255.0
-    ip4_addr_t gw, mask;
-    IP4_ADDR(&gw,   192,168,4,1);
-    IP4_ADDR(&mask,255,255,255,0);
+        int r = cyw43_arch_wifi_connect_blocking(ssid_, pw_, CYW43_AUTH_WPA2_AES_PSK);
+        if (r) {
+            printf("STA connect failed (%d)\n", r);
+            return;
+        }
+        // once joined, lwIP DHCP client will assign an IP to netif_default :contentReference[oaicite:1]{index=1}
+        const ip4_addr_t* ip = netif_ip4_addr(netif_default);
+        printf("STA mode, got IP %s\n", ip4addr_ntoa(ip));
+    }
 
-    dhcp_server_init(&dhcp_server, (ip_addr_t*)&gw, (ip_addr_t*)&mask);
-    dns_server_init(&dns_server,  (ip_addr_t*)&gw);
-
-    // 4) start listening on TCP port 80
+    // ————————————————— common TCP setup —————————————————
     struct tcp_pcb* pcb = tcp_new();
-    if (!pcb) {
-        printf("tcp_new failed\n");
+    if (!pcb || tcp_bind(pcb, IP_ADDR_ANY, 80) != ERR_OK) {
+        printf("tcp bind failed\n");
         return;
     }
-    if (tcp_bind(pcb, IP_ADDR_ANY, 80) != ERR_OK) {
-        printf("tcp_bind failed\n");
-        return;
-    }
-    auto* listen_pcb = tcp_listen_with_backlog(pcb, 1);
-    tcp_accept(listen_pcb, tcp_accept_cb);
-    tcp_arg(listen_pcb, &context_);
-
+    auto* lpcb = tcp_listen_with_backlog(pcb, 1);
+    tcp_accept(lpcb, tcp_accept_cb);
+    tcp_arg(lpcb, &context_);
     printf("HTTP server started\n");
+
 }
 
 void WebServer::poll() {

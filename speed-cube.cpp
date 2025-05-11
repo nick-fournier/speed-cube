@@ -9,10 +9,12 @@
 #include "navigation/gui.h"
 #include "webserver.h"
 #include "gps_data.h"  // defines externs for filtered/raw data and mutexes
+#include "config.h"
 
 L76B l76b;
 KalmanFilter kf;
 NavigationGUI navGui;
+
 
 // Core 1: GPS handling
 void core1_main() {
@@ -34,8 +36,20 @@ int main() {
     mutex_init(&filtered_data_mutex);
     mutex_init(&raw_data_mutex);
 
+    // Wait for 10 seconds before starting the webserver
+    for (int i = 0; i < 10; i++) {
+        printf("Starting in %d seconds...\n", 10 - i);
+        sleep_ms(1000);
+    }
     // Start webserver using filtered data
-    WebServer server(filtered_data, &filtered_data_mutex);
+    WebServer server(
+        filtered_data,
+        &filtered_data_mutex,
+        WIFI_MODE,
+        WIFI_SSID,
+        WIFI_PASS
+    );
+
     server.start();
 
     navGui.init();

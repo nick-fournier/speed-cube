@@ -33,6 +33,25 @@ project(speed-cube C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+# ------------------------------------------------------------------
+# Load environment variables from `.env` and generate config.h
+# ------------------------------------------------------------------
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/.env" DOTENV_CONTENT)
+string(REGEX REPLACE "\r?\n" ";" DOTENV_LINES "${DOTENV_CONTENT}")
+
+foreach(line IN LISTS DOTENV_LINES)
+    if(line MATCHES "^([A-Za-z_][A-Za-z0-9_]*)=(.*)$")
+        set(${CMAKE_MATCH_1} "${CMAKE_MATCH_2}" CACHE INTERNAL "")
+    endif()
+endforeach()
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
+    "${CMAKE_BINARY_DIR}/config.h"
+    @ONLY
+)
+# ------------------------------------------------------------------
+
 # Add executable. Default name is the project name, version 0.1
 add_subdirectory(lib/L76B)
 add_subdirectory(lib/navigation)
@@ -63,6 +82,7 @@ target_link_libraries(speed-cube
 target_include_directories(speed-cube PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/lib
+        ${CMAKE_BINARY_DIR}  # so config.h is available
 )
 
 # Add any user requested libraries
