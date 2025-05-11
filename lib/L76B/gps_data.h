@@ -18,4 +18,4 @@ extern mutex_t raw_data_mutex;
 
 // Shared filtered fix data from Kalman filter
 extern GPSFix filtered_data;
-extern mutex_t filtered_mutex;
+extern mutex_t filtered_data_mutex;

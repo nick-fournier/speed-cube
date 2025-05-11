@@ -5,4 +5,4 @@ GPSFix raw_data = {};
 mutex_t raw_data_mutex;
 
 GPSFix filtered_data = {};
-mutex_t filtered_mutex;
+mutex_t filtered_data_mutex;

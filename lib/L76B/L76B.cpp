@@ -28,10 +28,6 @@ unsigned long systime() {
 }
 
 void L76B::init() {
-    // Initialize mutexes before use
-    mutex_init(&raw_data_mutex);
-    mutex_init(&filtered_mutex);
-
     // Initialize UART
     uart_init(UART_ID, BAUD_RATE_DEFAULT);
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
@@ -168,7 +164,7 @@ void L76B::update() {
     );
 
     // Store filtered output
-    mutex_enter_blocking(&filtered_mutex);
+    mutex_enter_blocking(&filtered_data_mutex);
     filtered_data = {
         .lat = kf.getLatitude(),
         .lon = kf.getLongitude(),
@@ -177,7 +173,7 @@ void L76B::update() {
         .time = working_data.time,
         .status = true  // Always valid if filtered
     };
-    mutex_exit(&filtered_mutex);
+    mutex_exit(&filtered_data_mutex);
 }
 
 GPSFix L76B::getData() const {

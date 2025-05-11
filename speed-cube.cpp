@@ -7,7 +7,7 @@
 
 #include "L76B.h"
 #include "navigation/gui.h"
-// #include "webserver.h"
+#include "webserver.h"
 #include "gps_data.h"  // defines externs for filtered/raw data and mutexes
 
 L76B l76b;
@@ -29,6 +29,11 @@ int main() {
     sleep_ms(1000);  // Allow USB CDC to settle for serial output
     printf("Booting Speed-Cube system...\n");
 
+    // Initialize mutexes
+    printf("Initializing filtered_mutex...\n");
+    mutex_init(&filtered_data_mutex);
+    mutex_init(&raw_data_mutex);
+
     // Initialize Wi-Fi
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_WORLDWIDE)) {
         printf("WiFi init failed\n");
@@ -40,8 +45,8 @@ int main() {
     printf("Access Point started. Connect to http://192.168.4.1/\n");
 
     // // Start webserver using filtered data
-    // static WebServer webserver(filtered_data, &filtered_mutex);
-    // webserver.start();
+    static WebServer webserver(filtered_data, &filtered_data_mutex);
+    webserver.start();
 
     navGui.init();
     multicore_launch_core1(core1_main);
@@ -51,17 +56,17 @@ int main() {
         GPSFix filtered_snapshot;
 
         // Read working data
-        raw_snapshot = l76b.getData();
+        // raw_snapshot = l76b.getData();
 
-        // // Read raw GPS data
-        // mutex_enter_blocking(&raw_data_mutex);
-        // raw_snapshot = raw_data;
-        // mutex_exit(&raw_data_mutex);
+        // Read raw GPS data
+        mutex_enter_blocking(&raw_data_mutex);
+        raw_snapshot = raw_data;
+        mutex_exit(&raw_data_mutex);
 
-        // // Read filtered GPS data
-        // mutex_enter_blocking(&filtered_mutex);
-        // filtered_snapshot = filtered_data;
-        // mutex_exit(&filtered_mutex);
+        // Read filtered GPS data
+        mutex_enter_blocking(&filtered_data_mutex);
+        filtered_snapshot = filtered_data;
+        mutex_exit(&filtered_data_mutex);
 
         // Update GUI using raw GPS fix
         if (raw_snapshot.status) {
@@ -76,9 +81,10 @@ int main() {
             raw_snapshot.lat, raw_snapshot.lon,
             raw_snapshot.speed, raw_snapshot.course);
 
-        printf("[FILTERED] lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
-               filtered_snapshot.lat, filtered_snapshot.lon,
-               filtered_snapshot.speed, filtered_snapshot.course);
+        printf("[FILTERED] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
+                filtered_snapshot.time,
+                filtered_snapshot.lat, filtered_snapshot.lon,
+                filtered_snapshot.speed, filtered_snapshot.course);
 
         sleep_ms(200);  // GUI + print update rate
     }

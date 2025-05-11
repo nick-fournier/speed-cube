@@ -40,7 +40,7 @@ class NavigationGUI {
         // Params
         int centerX = 160;  // Center X coordinate of the display
         int centerY = 150;  // Center Y coordinate of the display
-        int radius = 120;   // Radius of the circle
+        int radius = 130;   // Radius of the circle
 
 
         // Internal variables

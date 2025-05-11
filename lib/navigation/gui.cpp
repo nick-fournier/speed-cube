@@ -19,11 +19,12 @@ void NavigationGUI::init() {
 
     // Draw a circle in the top half of the screen
     // Screen is 320 x 480
-    GUI_DrawCircle(160, 150, 120, WHITE, DRAW_EMPTY, DOT_PIXEL_2X2);
+    GUI_DrawCircle(160, 150, 130, WHITE, DRAW_EMPTY, DOT_PIXEL_2X2);
     GUI_DrawLine(0, 310, 320, 310, WHITE, LINE_SOLID, DOT_PIXEL_1X1);
 
     // Draw labels
-    GUI_DisString_EN(100, 80, "kts (SOG)", &Font20, BLACK, WHITE);    
+    GUI_DisString_EN(100, 50, "kts (VMG)", &Font20, BLACK, WHITE);
+    GUI_DisString_EN(100, 155, "kts (SOG)", &Font20, BLACK, WHITE);
 }
 
 void NavigationGUI::update(GPSFix Data) {
@@ -44,12 +45,25 @@ void NavigationGUI::update(GPSFix Data) {
     char speedStr[8];
     char vmgStr[8];
 
+    // Make VMG absolute value, but store the sign
+    float vmg_sign = vmg < 0 ? -1 : 1;
+    vmg = fabs(vmg);
+
     snprintf(speedStr, sizeof(speedStr), "%.1f", Data.speed);
     snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg);
     
-    // Show speed in center of circle
-    GUI_DisString_EN(75, 100, vmgStr, &Font96, LCD_BACKGROUND, WHITE);
-    // GUI_DisString_EN(20, 40, speedStr, &Font24, LCD_BACKGROUND, WHITE);
+    // Show speed in bottom half of circle
+    GUI_DisString_EN(100, 175, speedStr, &Font72, LCD_BACKGROUND, WHITE);
+
+    // Show VMG in top half of circle
+    GUI_DisString_EN(100, 65, vmgStr, &Font72, LCD_BACKGROUND, WHITE);
+
+    // Show the sign left of the VMG, to keep centered
+    if (vmg_sign < 0) {
+        GUI_DisString_EN(60, 70, "-", &Font72, LCD_BACKGROUND, WHITE);
+    } else {
+        GUI_DisString_EN(60, 70, " ", &Font72, LCD_BACKGROUND, WHITE);
+    }
 
 
     // Print timestamp
