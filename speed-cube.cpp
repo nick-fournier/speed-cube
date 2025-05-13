@@ -36,11 +36,6 @@ int main() {
     mutex_init(&filtered_data_mutex);
     mutex_init(&raw_data_mutex);
 
-    // Wait for 10 seconds before starting the webserver
-    for (int i = 0; i < 10; i++) {
-        printf("Starting in %d seconds...\n", 10 - i);
-        sleep_ms(1000);
-    }
     // Start webserver using filtered data
     WebServer server(
         filtered_data,
@@ -83,15 +78,15 @@ int main() {
         }
 
         // Print both to the console for debugging
-        printf("[RAW] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
-            raw_snapshot.time,
-            raw_snapshot.lat, raw_snapshot.lon,
-            raw_snapshot.speed, raw_snapshot.course);
+        // printf("[RAW] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
+        //     raw_snapshot.time,
+        //     raw_snapshot.lat, raw_snapshot.lon,
+        //     raw_snapshot.speed, raw_snapshot.course);
 
-        printf("[FILTERED] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
-            filtered_snapshot.time,
-            filtered_snapshot.lat, filtered_snapshot.lon,
-            filtered_snapshot.speed, filtered_snapshot.course);
+        // printf("[FILTERED] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
+        //     filtered_snapshot.time,
+        //     filtered_snapshot.lat, filtered_snapshot.lon,
+        //     filtered_snapshot.speed, filtered_snapshot.course);
 
         sleep_ms(200);  // GUI + print update rate
     }

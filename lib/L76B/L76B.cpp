@@ -41,12 +41,12 @@ void L76B::init() {
     uart_puts(UART_ID, PMTK_SET_NMEA_UPDATERATE);
 
     // Set baud rate to 115200
-    // uart_puts(UART_ID, PMTK_CMD_BAUDRATE);
-    // sleep_ms(100);  // Wait for the command to take effect
+    uart_puts(UART_ID, PMTK_CMD_BAUDRATE);
+    sleep_ms(100);  // Wait for the command to take effect
 
     // Reinitialize UART with the new baud rate
-    // uart_deinit(UART_ID);
-    // uart_init(UART_ID, BAUD_RATE);
+    uart_deinit(UART_ID);
+    uart_init(UART_ID, BAUD_RATE);
 
     // Enable UART RX interrupt
     irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);

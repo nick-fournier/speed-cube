@@ -1,4 +1,5 @@
 #include "webserver.h"
+#include "gps_data.h"
 
 #include "pico/cyw43_arch.h"
 #include "lwip/tcp.h"
@@ -10,17 +11,11 @@
 #include <sstream>
 #include <string>
 
-
-#ifdef __cplusplus
 extern "C" {
-#endif
-
-#include "dhcpserver.h"
-#include "dnsserver.h"
-
-#ifdef __cplusplus
+    #include "dhcpserver/dhcpserver.h"
+    #include "dnsserver/dnsserver.h"
 }
-#endif
+
 
 //— a single DHCP and DNS server instance must live for the life of the AP
 static dhcp_server_t dhcp_server;
@@ -30,40 +25,115 @@ static dns_server_t  dns_server;
 // TCP callbacks
 //————————————————————————————————————————————————————————————————————————
 
-static err_t tcp_recv_cb(void* arg, struct tcp_pcb* tpcb,
-                        struct pbuf* p, err_t err) {
+static err_t on_sent(void* arg, struct tcp_pcb* tpcb, u16_t len) {
+    tcp_close(tpcb);
+    return ERR_OK;
+}
+
+static err_t tcp_recv_cb(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err) {
     if (!p) {
         tcp_close(tpcb);
         return ERR_OK;
     }
 
-    auto* ctx = static_cast<WebServerContext*>(arg);
-    std::ostringstream json;
+    char* req = static_cast<char*>(p->payload);
 
-    // copy under lock
-    mutex_enter_blocking(ctx->mutex);
-    json << "{"
-         << "\"lat\":"    << ctx->fix->lat    << ","
-         << "\"lon\":"    << ctx->fix->lon    << ","
-         << "\"speed\":"  << ctx->fix->speed  << ","
-         << "\"course\":" << ctx->fix->course
-         << "}";
-    mutex_exit(ctx->mutex);
+    if (strncmp(req, "GET /data", 9) == 0) {
+        std::ostringstream json;
+        mutex_enter_blocking(&raw_data_mutex);
+        GPSFix raw = raw_data;
+        mutex_exit(&raw_data_mutex);
 
-    std::string body = json.str();
-    char hdr[128];
-    int h = snprintf(hdr, sizeof(hdr),
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: application/json\r\n"
-        "Content-Length: %u\r\n"
-        "\r\n",
-        (unsigned)body.size());
+        mutex_enter_blocking(&filtered_data_mutex);
+        GPSFix filtered = filtered_data;
+        mutex_exit(&filtered_data_mutex);
 
-    tcp_write(tpcb, hdr, h, TCP_WRITE_FLAG_COPY);
-    tcp_write(tpcb, body.c_str(), body.size(), TCP_WRITE_FLAG_COPY);
+        // Create JSON response
+        json << "{"
+             << "\"raw\": {\"lat\":" << raw.lat << ",\"lon\":" << raw.lon << "},"
+             << "\"filtered\": {\"lat\":" << filtered.lat << ",\"lon\":" << filtered.lon << "}"
+             << "}";
 
+        std::string body = json.str();
+        char hdr[128];
+        int h = snprintf(hdr, sizeof(hdr),
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: %u\r\n"
+            "\r\n",
+            (unsigned)body.size());
+
+        err_t err;
+        err = tcp_write(tpcb, hdr, h, TCP_WRITE_FLAG_COPY);
+        if (err != ERR_OK) {
+            pbuf_free(p);
+            tcp_abort(tpcb);
+            return ERR_ABRT;
+        }
+
+        err = tcp_write(tpcb, body.c_str(), body.size(), TCP_WRITE_FLAG_COPY);
+        if (err != ERR_OK) {
+            pbuf_free(p);
+            tcp_abort(tpcb);
+            return ERR_ABRT;
+        }
+
+        tcp_output(tpcb);
+        tcp_sent(tpcb, on_sent);
+    } else if (strncmp(req, "GET / ", 6) == 0 || strncmp(req, "GET /HTTP", 9) == 0) {
+        const char* html =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "\r\n"
+            "<!DOCTYPE html><html><head><title>GPS Plot</title></head><body>"
+            "<canvas id='canvas' width='800' height='600' style='border:1px solid black;'></canvas>"
+            "<script>"
+            "const canvas=document.getElementById('canvas');"
+            "const ctx=canvas.getContext('2d');"
+            "let raw=[], filtered=[];"
+            "function draw() {"
+            "ctx.clearRect(0,0,canvas.width,canvas.height);"
+            "ctx.fillStyle='red';"
+            "raw.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();});"
+            "ctx.strokeStyle='blue';ctx.beginPath();"
+            "filtered.forEach((p,i)=>{i==0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});ctx.stroke();"
+            "}"
+            "function fetchData() {"
+            "fetch('/data').then(r=>r.json()).then(d=>{"
+            "let rx=(d.raw.lon+180)*(canvas.width/360);"
+            "let ry=(90-d.raw.lat)*(canvas.height/180);"
+            "raw.push({x:rx,y:ry});if(raw.length>1000)raw.shift();"
+            "let fx=(d.filtered.lon+180)*(canvas.width/360);"
+            "let fy=(90-d.filtered.lat)*(canvas.height/180);"
+            "filtered.push({x:fx,y:fy});if(filtered.length>1000)filtered.shift();draw();});"
+            "}"
+            "setInterval(fetchData, 1000);"
+            "</script></body></html>";
+
+        err_t err = tcp_write(tpcb, html, strlen(html), TCP_WRITE_FLAG_COPY);
+        if (err != ERR_OK) {
+            pbuf_free(p);
+            tcp_abort(tpcb);
+            return ERR_ABRT;
+        }
+
+        tcp_output(tpcb);
+        tcp_sent(tpcb, on_sent);
+    } else {
+        const char* not_found = "HTTP/1.1 404 Not Found\r\n\r\n";
+        err_t err = tcp_write(tpcb, not_found, strlen(not_found), TCP_WRITE_FLAG_COPY);
+        if (err != ERR_OK) {
+            pbuf_free(p);
+            tcp_abort(tpcb);
+            return ERR_ABRT;
+        }
+
+        tcp_output(tpcb);
+        tcp_sent(tpcb, on_sent);
+    }
+
+    tcp_recved(tpcb, p->tot_len);
     pbuf_free(p);
-    tcp_close(tpcb);
     return ERR_OK;
 }
 
@@ -77,25 +147,19 @@ static err_t tcp_accept_cb(void* arg, struct tcp_pcb* newpcb, err_t err) {
 // WebServer implementation
 //————————————————————————————————————————————————————————————————————————
 
-WebServer::WebServer(GPSFix& fix, mutex_t* m,
+WebServer::WebServer(
+    GPSFix& fix,
+    mutex_t* m,
     const char* mode,
     const char* ssid,
     const char* pw)
-: context_{ &fix, m }
-, mode_(parse_mode(mode))
-, ssid_(ssid)
-, pw_(pw)
-{}
+: context_{ &fix, m }, mode_(parse_mode(mode)), ssid_(ssid), pw_(pw) {}
 
 WifiMode WebServer::parse_mode(const char* mode) {
-    if (strcmp(mode, "AP") == 0) {
-        return WifiMode::AP;
-    } else if (strcmp(mode, "STA") == 0) {
-        return WifiMode::STA;
-    } else {
-        printf("Invalid Wi-Fi mode: %s\n", mode);
-        return WifiMode::AP;  // default to AP
-    }
+    if (strcmp(mode, "AP") == 0) return WifiMode::AP;
+    if (strcmp(mode, "STA") == 0) return WifiMode::STA;
+    printf("Invalid Wi-Fi mode: %s\n", mode);
+    return WifiMode::AP;
 }
 
 void WebServer::start() {
@@ -129,7 +193,7 @@ void WebServer::start() {
             return;
         }
         // once joined, lwIP DHCP client will assign an IP to netif_default :contentReference[oaicite:1]{index=1}
-        const ip4_addr_t* ip = netif_ip4_addr(netif_default);
+        ip = netif_ip4_addr(netif_default);
         printf("STA mode, got IP %s\n", ip4addr_ntoa(ip));
     }
 
@@ -152,3 +216,4 @@ void WebServer::poll() {
     // 2) drive lwIP timers (DHCP leasing, ARP, TCP timeouts…)
     sys_check_timeouts();
 }
+

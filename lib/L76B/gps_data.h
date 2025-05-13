@@ -1,6 +1,8 @@
 #pragma once
 #include "pico/sync.h"
 
+#define GPS_BUFFER 100
+
 // Unified GPS data structure
 struct GPSFix {
     char date[7];    // Date in ddmmyy format
@@ -9,8 +11,14 @@ struct GPSFix {
     float speed;     // Speed in knots
     float course;    // Course in degrees
     float time;      // UTC time (hhmmss.sss)
-    bool status;     // Valid fix (only meaningful for raw data)
+    bool status;     // Status flag (true if valid fix)
 };
+
+// Array of GPS data
+extern GPSFix gps_buffer[GPS_BUFFER];
+extern int gps_buffer_head;
+extern int gps_buffer_count;
+extern mutex_t gps_buffer_mutex;
 
 // Shared raw fix data from NMEA parser (in L76B)
 extern GPSFix raw_data;

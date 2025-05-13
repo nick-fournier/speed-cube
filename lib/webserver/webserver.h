@@ -2,6 +2,7 @@
 
 #include "gps_data.h"
 #include "pico/sync.h"
+#include "lwip/ip4_addr.h"      // for IP4_ADDR
 
 enum class WifiMode { AP, STA };
 
@@ -21,11 +22,14 @@ public:
     );
     void start();
     void poll();
+    void ip_info();
 
 private:
     WebServerContext context_;
     WifiMode     mode_;
     const char*  ssid_;
     const char*  pw_;
+    const ip4_addr_t* ip = nullptr;
     WifiMode parse_mode(const char* mode);
+    
 };
