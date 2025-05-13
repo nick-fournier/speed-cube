@@ -67,14 +67,13 @@ void NavigationGUI::update(GPSFix Data) {
 
 
     // Print timestamp
-    char timestamp[10];
-    snprintf(timestamp, sizeof(timestamp), "%02d:%02d:%02d",
-        (int)(Data.time / 10000),
-        (int)(fmod((Data.time / 100), 100)),
-        (int)(fmod(Data.time, 100))
-    );
+    char time_str[10];
+    // char date_str[11];
 
-    GUI_DisString_EN(0, 320, timestamp, &Font24, BLACK, WHITE);
+    time_from_epoch(Data.timestamp, time_str, sizeof(time_str));
+    // date_from_epoch(Data.timestamp, date_str, sizeof(date_str));
+
+    GUI_DisString_EN(0, 320, time_str, &Font24, BLACK, WHITE);
     
     // Print course under speed
     // char courseStr[20];

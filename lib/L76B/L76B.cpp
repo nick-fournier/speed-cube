@@ -1,4 +1,6 @@
 #include "L76B.h"
+#include "gps_datetime.h"
+
 #include <cstring>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
@@ -137,15 +139,19 @@ void L76B::parse(const char* buffer) {
     }
 
     // Set working data
-    working_data.status = true;
-    working_data.time = strtof(tokens[1], nullptr);
+
+    float time = strtof(tokens[1], nullptr);
+    char date[7];
+
     working_data.lat = toDecimalDegrees(strtof(tokens[3], nullptr), tokens[4][0]);
     working_data.lon = toDecimalDegrees(strtof(tokens[5], nullptr), tokens[6][0]);
     working_data.speed = strtof(tokens[7], nullptr);
     working_data.course = strtof(tokens[8], nullptr);
+    working_data.timestamp = to_epoch(date, time);
+    working_data.status = true;
 
-    strncpy(working_data.date, tokens[9], sizeof(working_data.date) - 1);
-    working_data.date[sizeof(working_data.date) - 1] = '\0';
+    strncpy(date, tokens[9], sizeof(date) - 1);
+    date[sizeof(date) - 1] = '\0';
 
     // Update kalman and share data
     update();
@@ -166,11 +172,11 @@ void L76B::update() {
     // Store filtered output
     mutex_enter_blocking(&filtered_data_mutex);
     filtered_data = {
+        .timestamp = working_data.timestamp,
         .lat = kf.getLatitude(),
         .lon = kf.getLongitude(),
         .speed = kf.getSpeed(),
         .course = kf.getCourse(),
-        .time = working_data.time,
         .status = true  // Always valid if filtered
     };
     mutex_exit(&filtered_data_mutex);
@@ -200,7 +206,7 @@ float L76B::toDecimalDegrees(
 
 }
 
-float L76B::Time() const { return working_data.time; }
+float L76B::Time() const { return working_data.timestamp; }
 float L76B::Latitude() const { return working_data.lat; }
 float L76B::Longitude() const { return working_data.lon; }
 float L76B::Speed() const { return working_data.speed; }

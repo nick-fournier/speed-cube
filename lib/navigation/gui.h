@@ -2,6 +2,7 @@
 #define NAVIGATION_H
 #include "L76B.h"
 #include "gps_data.h"
+#include "gps_datetime.h"
 #include "math.h"
 
 extern "C" {

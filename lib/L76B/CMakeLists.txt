@@ -10,6 +10,7 @@ target_sources(L76B PRIVATE
     L76B.cpp
     gps_data.cpp
     kalman.cpp
+    gps_datetime.cpp
 )
 
 # Include directories for the library
