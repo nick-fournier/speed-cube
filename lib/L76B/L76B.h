@@ -45,10 +45,12 @@ private:
 
     // Buffer for NMEA sentence
     static inline char rx_buffer[83];
-    static inline size_t buffer_index = 0;
+    static inline size_t rx_buffer_index = 0;
 
     // GPSFix Data;  // Raw GPS data
     static inline GPSFix working_data;
+    size_t gps_buffer_index = 0;
+    size_t gps_buffer_count = 0;
 
     // Pointer to this instance
     static inline L76B* instance = nullptr;

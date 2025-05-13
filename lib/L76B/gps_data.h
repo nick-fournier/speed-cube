@@ -1,7 +1,7 @@
 #pragma once
 #include "pico/sync.h"
 
-#define GPS_BUFFER 100
+#define GPS_BUFFER_SIZE 100
 
 // Unified GPS data structure
 struct GPSFix {
@@ -16,9 +16,7 @@ struct GPSFix {
 };
 
 // Array of GPS data
-extern GPSFix gps_buffer[GPS_BUFFER];
-extern int gps_buffer_head;
-extern int gps_buffer_count;
+extern GPSFix gps_buffer[GPS_BUFFER_SIZE];
 extern mutex_t gps_buffer_mutex;
 
 // Shared raw fix data from NMEA parser (in L76B)

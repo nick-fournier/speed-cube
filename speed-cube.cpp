@@ -35,6 +35,7 @@ int main() {
     printf("Initializing filtered_mutex...\n");
     mutex_init(&filtered_data_mutex);
     mutex_init(&raw_data_mutex);
+    mutex_init(&gps_buffer_mutex);
 
     // Start webserver using filtered data
     WebServer server(

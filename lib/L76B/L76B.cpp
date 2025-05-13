@@ -77,23 +77,23 @@ void L76B::handle_uart() {
        
         // Start of new sentence
         if (c == '$') {
-            buffer_index = 0;  // Reset index
+            rx_buffer_index = 0;  // Reset index
         }
 
         // Add to buffer if there's space
-        if (buffer_index < sizeof(rx_buffer) - 1) {
-            rx_buffer[buffer_index++] = c;
+        if (rx_buffer_index < sizeof(rx_buffer) - 1) {
+            rx_buffer[rx_buffer_index++] = c;
         }
 
         // Check for end of sentence
         if (c == '\n' || c == '\r') {
-            rx_buffer[buffer_index] = '\0';  // Null-terminate the string
+            rx_buffer[rx_buffer_index] = '\0';  // Null-terminate the string
 
             if (strncmp(rx_buffer, "$GNRMC", 6) == 0) {
                 parse(rx_buffer);
             }
 
-            buffer_index = 0;  // Reset for the next sentence
+            rx_buffer_index = 0;  // Reset for the next sentence
         }
 
     }
@@ -143,15 +143,16 @@ void L76B::parse(const char* buffer) {
     float time = strtof(tokens[1], nullptr);
     char date[7];
 
+    strncpy(date, tokens[9], sizeof(date) - 1);
+    date[sizeof(date) - 1] = '\0';
+
+    // Assign the data
     working_data.lat = toDecimalDegrees(strtof(tokens[3], nullptr), tokens[4][0]);
     working_data.lon = toDecimalDegrees(strtof(tokens[5], nullptr), tokens[6][0]);
     working_data.speed = strtof(tokens[7], nullptr);
     working_data.course = strtof(tokens[8], nullptr);
     working_data.timestamp = to_epoch(date, time);
     working_data.status = true;
-
-    strncpy(date, tokens[9], sizeof(date) - 1);
-    date[sizeof(date) - 1] = '\0';
 
     // Update kalman and share data
     update();
@@ -180,6 +181,23 @@ void L76B::update() {
         .status = true  // Always valid if filtered
     };
     mutex_exit(&filtered_data_mutex);
+
+    // Update the GPS buffer data array
+    mutex_enter_blocking(&gps_buffer_mutex);
+    
+    // Get the current buffer slot
+    GPSFix& slot = gps_buffer[gps_buffer_index];
+
+    // Update the slot with the latest data
+    slot.lat = working_data.lat;
+    slot.lon = working_data.lon;
+    slot.timestamp = working_data.timestamp;
+    slot.status = working_data.status;
+    
+    // Iterate the buffer index
+    gps_buffer_index = (gps_buffer_index + 1) % GPS_BUFFER_SIZE;
+
+    mutex_exit(&gps_buffer_mutex);
 }
 
 GPSFix L76B::getData() const {
