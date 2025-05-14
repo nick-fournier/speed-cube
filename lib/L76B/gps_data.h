@@ -17,6 +17,8 @@ struct GPSFix {
 
 // Array of GPS data
 extern GPSFix gps_buffer[GPS_BUFFER_SIZE];
+extern size_t gps_buffer_index;
+extern size_t gps_buffer_count;
 extern mutex_t gps_buffer_mutex;
 
 // Shared raw fix data from NMEA parser (in L76B)

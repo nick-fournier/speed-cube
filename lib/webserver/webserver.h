@@ -22,7 +22,6 @@ public:
     );
     void start();
     void poll();
-    void ip_info();
 
 private:
     WebServerContext context_;

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>GPS Plot</title>
+  <link rel="stylesheet" href="/uplot.css">
+  <script src="/uplot.js"></script>
+</head>
+<body>
+  <div id="plot" style="width:800px;height:600px;"></div>
+
+  <script>
+    let rawX = [], rawY = [];
+    let filtX = [], filtY = [];
+    let lastTimestamp = 0;
+
+    const opts = {
+      title: "GPS Lon vs Lat",
+      width: 800,
+      height: 600,
+      scales: {
+        x: { auto: true },
+        y: { auto: true }
+      },
+      series: [
+        {},  // dummy for X
+        { label: "Raw", stroke: "red", width: 0, points: { show: true, size: 3, stroke: "red", fill: "red" } },
+        { label: "Filtered", stroke: "blue", width: 1.5, points: { show: false } }
+      ],
+      axes: [
+        { label: "Longitude" },
+        { label: "Latitude" }
+      ]
+    };
+
+    const u = new uPlot(opts, [[], [], []], document.getElementById("plot"));
+
+    function updatePlot() {
+      const count = Math.min(rawX.length, filtX.length);
+      const allX = rawX.slice(0, count);
+      const rawOnlyY = rawY.slice(0, count).map((v, i) => (filtX[i] !== undefined ? v : null));
+      const filteredY = filtY.slice(0, count);
+      u.setData([allX, rawOnlyY, filteredY]);
+    }
+
+    function fetchData() {
+      // Fetch most recent fix
+      fetch('/data')
+        .then(r => r.json())
+        .then(d => {
+          rawX.push(d.raw.lon);
+          rawY.push(d.raw.lat);
+          filtX.push(d.filtered.lon);
+          filtY.push(d.filtered.lat);
+
+          if (rawX.length > 1000) {
+            rawX.shift(); rawY.shift(); filtX.shift(); filtY.shift();
+          }
+
+          updatePlot();
+        });
+
+      // Fetch buffered points
+      fetch(`/buffer?after=${lastTimestamp}`)
+        .then(r => r.json())
+        .then(points => {
+          points.forEach(p => {
+            filtX.push(p.lon);
+            filtY.push(p.lat);
+            rawX.push(null);  // maintain array length
+            rawY.push(null);
+            if (p.timestamp > lastTimestamp) lastTimestamp = p.timestamp;
+          });
+
+          while (filtX.length > 1000) {
+            filtX.shift(); filtY.shift(); rawX.shift(); rawY.shift();
+          }
+
+          updatePlot();
+        });
+    }
+
+    setInterval(fetchData, 1000);
+  </script>
+</body>
+</html>

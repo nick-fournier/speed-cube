@@ -8,4 +8,6 @@ GPSFix filtered_data = {};
 mutex_t filtered_data_mutex;
 
 GPSFix gps_buffer[GPS_BUFFER_SIZE] = {};
+size_t gps_buffer_index = 0;
+size_t gps_buffer_count = 0;
 mutex_t gps_buffer_mutex;

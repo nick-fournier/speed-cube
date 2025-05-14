@@ -155,10 +155,10 @@ void L76B::parse(const char* buffer) {
     working_data.status = true;
 
     // Update kalman and share data
-    update();
+    share();
 }
 
-void L76B::update() {
+void L76B::share() {
     // Make raw data available for other threads
     mutex_enter_blocking(&raw_data_mutex);
     raw_data = working_data;
@@ -184,7 +184,7 @@ void L76B::update() {
 
     // Update the GPS buffer data array
     mutex_enter_blocking(&gps_buffer_mutex);
-    
+
     // Get the current buffer slot
     GPSFix& slot = gps_buffer[gps_buffer_index];
 
@@ -193,9 +193,14 @@ void L76B::update() {
     slot.lon = working_data.lon;
     slot.timestamp = working_data.timestamp;
     slot.status = working_data.status;
-    
+
     // Iterate the buffer index
     gps_buffer_index = (gps_buffer_index + 1) % GPS_BUFFER_SIZE;
+
+    // ✅ Only increase count if buffer isn’t already full
+    if (gps_buffer_count < GPS_BUFFER_SIZE) {
+        gps_buffer_count++;
+    }
 
     mutex_exit(&gps_buffer_mutex);
 }

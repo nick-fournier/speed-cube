@@ -37,8 +37,8 @@ private:
     // Helper function to parse $GNRMC NMEA sentence
     void parse(const char* nmea);
     
-    // Helper function to update kalman and mutex data
-    void update();
+    // Helper function to update kalman and share mutex data
+    void share();
 
     // Helper function to convert NMEA coordinates to decimal degrees
     float toDecimalDegrees(const float& coordinate, const char& hemisphere);
@@ -49,8 +49,8 @@ private:
 
     // GPSFix Data;  // Raw GPS data
     static inline GPSFix working_data;
-    size_t gps_buffer_index = 0;
-    size_t gps_buffer_count = 0;
+    // size_t gps_buffer_index = 0;
+    // size_t gps_buffer_count = 0;
 
     // Pointer to this instance
     static inline L76B* instance = nullptr;
