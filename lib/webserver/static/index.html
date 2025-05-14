@@ -19,13 +19,32 @@
       width: 800,
       height: 600,
       scales: {
-        x: { auto: true },
-        y: { auto: true }
+        x: {
+          auto: false,
+          time: false,
+          min: -122.5,
+          max: -122.0
+        },
+        y: {
+          auto: false,
+          min: 37.5,
+          max: 38.0
+        }
       },
       series: [
-        {},  // dummy for X
-        { label: "Raw", stroke: "red", width: 0, points: { show: true, size: 3, stroke: "red", fill: "red" } },
-        { label: "Filtered", stroke: "blue", width: 1.5, points: { show: false } }
+        {},  // x axis placeholder
+        {
+          label: "Raw",
+          stroke: "red",
+          width: 0,
+          points: { show: true, size: 3, stroke: "red", fill: "red" }
+        },
+        {
+          label: "Filtered",
+          stroke: "blue",
+          width: 1.5,
+          points: { show: false }
+        }
       ],
       axes: [
         { label: "Longitude" },
@@ -37,21 +56,24 @@
 
     function updatePlot() {
       const count = Math.min(rawX.length, filtX.length);
-      const allX = rawX.slice(0, count);
-      const rawOnlyY = rawY.slice(0, count).map((v, i) => (filtX[i] !== undefined ? v : null));
-      const filteredY = filtY.slice(0, count);
+      const allX = rawX.map((val, i) => val !== null ? val : filtX[i]);
+      const rawOnlyY = rawY.map((val, i) => val !== null ? val : null);
+      const filteredY = filtY;
+
       u.setData([allX, rawOnlyY, filteredY]);
     }
 
     function fetchData() {
       // Fetch most recent fix
-      fetch('/data')
+      fetch('/location')
         .then(r => r.json())
         .then(d => {
-          rawX.push(d.raw.lon);
-          rawY.push(d.raw.lat);
-          filtX.push(d.filtered.lon);
-          filtY.push(d.filtered.lat);
+          if (d.raw && d.filtered) {
+            rawX.push(d.raw.lon);
+            rawY.push(d.raw.lat);
+            filtX.push(d.filtered.lon);
+            filtY.push(d.filtered.lat);
+          }
 
           if (rawX.length > 1000) {
             rawX.shift(); rawY.shift(); filtX.shift(); filtY.shift();
@@ -65,22 +87,32 @@
         .then(r => r.json())
         .then(points => {
           points.forEach(p => {
-            filtX.push(p.lon);
-            filtY.push(p.lat);
-            rawX.push(null);  // maintain array length
-            rawY.push(null);
-            if (p.timestamp > lastTimestamp) lastTimestamp = p.timestamp;
+            if (p.raw && p.filtered) {
+              rawX.push(p.raw.lon);
+              rawY.push(p.raw.lat);
+              filtX.push(p.filtered.lon);
+              filtY.push(p.filtered.lat);
+            } else {
+              rawX.push(null);
+              rawY.push(null);
+              filtX.push(null);
+              filtY.push(null);
+            }
+
+            if (p.timestamp > lastTimestamp) {
+              lastTimestamp = p.timestamp;
+            }
           });
 
-          while (filtX.length > 1000) {
-            filtX.shift(); filtY.shift(); rawX.shift(); rawY.shift();
+          while (rawX.length > 1000) {
+            rawX.shift(); rawY.shift(); filtX.shift(); filtY.shift();
           }
 
           updatePlot();
         });
     }
 
-    setInterval(fetchData, 1000);
+    setInterval(fetchData, 5000);
   </script>
 </body>
 </html>

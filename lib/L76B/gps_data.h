@@ -6,12 +6,10 @@
 // Unified GPS data structure
 struct GPSFix {
     uint32_t timestamp; // UTC time in seconds since epoch
-    // char date[7];    // Date in ddmmyy format
     float lat;      // Latitude in decimal degrees
     float lon;      // Longitude in decimal degrees
     float speed;     // Speed in knots
     float course;    // Course in degrees
-    // float time;      // UTC time (hhmmss.sss)
     bool status;     // Status flag (true if valid fix)
 };
 

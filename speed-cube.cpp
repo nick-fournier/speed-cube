@@ -16,6 +16,14 @@ KalmanFilter kf;
 NavigationGUI navGui;
 
 
+extern "C" {
+    #include <malloc.h>
+}
+
+void print_heap_stats() {
+    malloc_stats();  // prints to stdout
+}
+
 // Core 1: GPS handling
 void core1_main() {
     printf("Starting GPS on Core 1 with UART interrupts...\n");
@@ -87,6 +95,7 @@ int main() {
 
     navGui.init();
     multicore_launch_core1(core1_main);
+    static uint32_t last_logged_timestamp = 0;
 
     while (true) {
         // Poll the Wi-Fi stack
@@ -94,9 +103,6 @@ int main() {
 
         GPSFix raw_snapshot;
         GPSFix filtered_snapshot;
-
-        // Read working data
-        // raw_snapshot = l76b.getData();
 
         // Read raw GPS data
         mutex_enter_blocking(&raw_data_mutex);
@@ -113,8 +119,15 @@ int main() {
 
             // Update the GPS buffer with both raw and filtered data
             // for ever 5 seconds
-            if (raw_snapshot.timestamp % 5 == 0) {
+            if (
+                raw_snapshot.timestamp % 5 == 0 &&
+                raw_snapshot.timestamp != last_logged_timestamp
+            ) {
+
+                // print_heap_stats();
+
                 update_gps_buffer(raw_snapshot, filtered_snapshot);
+                last_logged_timestamp = raw_snapshot.timestamp;
             }
 
             navGui.update(raw_snapshot);
