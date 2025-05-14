@@ -182,27 +182,6 @@ void L76B::share() {
     };
     mutex_exit(&filtered_data_mutex);
 
-    // Update the GPS buffer data array
-    mutex_enter_blocking(&gps_buffer_mutex);
-
-    // Get the current buffer slot
-    GPSFix& slot = gps_buffer[gps_buffer_index];
-
-    // Update the slot with the latest data
-    slot.lat = working_data.lat;
-    slot.lon = working_data.lon;
-    slot.timestamp = working_data.timestamp;
-    slot.status = working_data.status;
-
-    // Iterate the buffer index
-    gps_buffer_index = (gps_buffer_index + 1) % GPS_BUFFER_SIZE;
-
-    // ✅ Only increase count if buffer isn’t already full
-    if (gps_buffer_count < GPS_BUFFER_SIZE) {
-        gps_buffer_count++;
-    }
-
-    mutex_exit(&gps_buffer_mutex);
 }
 
 GPSFix L76B::getData() const {

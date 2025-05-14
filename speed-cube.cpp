@@ -26,6 +26,43 @@ void core1_main() {
     }
 }
 
+// Function to update the GPS buffer with both raw and filtered data
+void update_gps_buffer(
+    const GPSFix& raw_data,
+    const GPSFix& filtered_data
+) {
+    mutex_enter_blocking(&gps_buffer_mutex);
+
+    // Get the current buffer slot
+    GPSBuffer& slot = gps_buffer[gps_buffer_index];
+
+    // Update the slot with the latest raw and filtered data
+    slot.raw.lat = raw_data.lat;
+    slot.raw.lon = raw_data.lon;
+    slot.raw.speed = raw_data.speed;
+    slot.raw.course = raw_data.course;
+    slot.raw.timestamp = raw_data.timestamp;
+    slot.raw.status = raw_data.status;
+
+    slot.filtered.lat = filtered_data.lat;
+    slot.filtered.lon = filtered_data.lon;
+    slot.filtered.speed = filtered_data.speed;
+    slot.filtered.course = filtered_data.course;
+    slot.filtered.timestamp = filtered_data.timestamp;
+    slot.filtered.status = filtered_data.status;
+
+    // Iterate the buffer index
+    gps_buffer_index = (gps_buffer_index + 1) % GPS_BUFFER_SIZE;
+
+    // ✅ Only increase count if buffer isn’t already full
+    if (gps_buffer_count < GPS_BUFFER_SIZE) {
+        gps_buffer_count++;
+    }
+
+    mutex_exit(&gps_buffer_mutex);
+}
+
+
 int main() {
     stdio_init_all();
     sleep_ms(1000);  // Allow USB CDC to settle for serial output
@@ -73,6 +110,13 @@ int main() {
 
         // Update GUI using raw GPS fix
         if (raw_snapshot.status) {
+
+            // Update the GPS buffer with both raw and filtered data
+            // for ever 5 seconds
+            if (raw_snapshot.timestamp % 5 == 0) {
+                update_gps_buffer(raw_snapshot, filtered_snapshot);
+            }
+
             navGui.update(raw_snapshot);
         } else {
             printf("Waiting for raw GPS fix...\n");

@@ -7,16 +7,23 @@
 struct GPSFix {
     uint32_t timestamp; // UTC time in seconds since epoch
     // char date[7];    // Date in ddmmyy format
-    double lat;      // Latitude in decimal degrees
-    double lon;      // Longitude in decimal degrees
+    float lat;      // Latitude in decimal degrees
+    float lon;      // Longitude in decimal degrees
     float speed;     // Speed in knots
     float course;    // Course in degrees
     // float time;      // UTC time (hhmmss.sss)
     bool status;     // Status flag (true if valid fix)
 };
 
+// Dual buffer of raw and filtered data
+struct GPSBuffer {
+    GPSFix raw;      // Raw data from NMEA parser
+    GPSFix filtered; // Filtered data from Kalman filter
+};
+
+
 // Array of GPS data
-extern GPSFix gps_buffer[GPS_BUFFER_SIZE];
+extern GPSBuffer gps_buffer[GPS_BUFFER_SIZE];
 extern size_t gps_buffer_index;
 extern size_t gps_buffer_count;
 extern mutex_t gps_buffer_mutex;

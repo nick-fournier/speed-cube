@@ -195,14 +195,20 @@ static err_t tcp_recv_cb(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t 
 
         for (size_t i = 0; i < count; ++i) {
             size_t idx = (head + GPS_BUFFER_SIZE - count + i) % GPS_BUFFER_SIZE;
-            const GPSFix& fix = gps_buffer[idx];
+            const GPSFix& raw_fix = gps_buffer[idx].raw;
+            const GPSFix& filtered_fix = gps_buffer[idx].filtered;
 
-            if (after_ts == 0 || fix.timestamp > after_ts) {
-                if (!first) json << ",";
-                json << "{\"lat\":" << fix.lat
-                     << ",\"lon\":" << fix.lon
-                     << ",\"timestamp\":" << fix.timestamp << "}";
-                first = false;
+            if (after_ts == 0 || raw_fix.timestamp > after_ts) {
+            if (!first) json << ",";
+            json << "{"
+                 << "\"raw\":{\"lat\":" << raw_fix.lat
+                 << ",\"lon\":" << raw_fix.lon
+                 << ",\"timestamp\":" << raw_fix.timestamp << "},"
+                 << "\"filtered\":{\"lat\":" << filtered_fix.lat
+                 << ",\"lon\":" << filtered_fix.lon
+                 << ",\"timestamp\":" << filtered_fix.timestamp << "}"
+                 << "}";
+            first = false;
             }
         }
         mutex_exit(&gps_buffer_mutex);
