@@ -68,12 +68,15 @@ void NavigationGUI::update(GPSFix Data) {
 
     // Print timestamp
     char time_str[10];
-    // char date_str[11];
-
-    time_from_epoch(Data.timestamp, time_str, sizeof(time_str));
-    // date_from_epoch(Data.timestamp, date_str, sizeof(date_str));
-
-    GUI_DisString_EN(0, 320, time_str, &Font24, BLACK, WHITE);
+    
+    // If Data.timestamp is 0, report "No GPS fix" to display
+    if (Data.timestamp == 0) {
+        snprintf(time_str, sizeof(time_str), "No GPS fix");
+        GUI_DisString_EN(0, 320, time_str, &Font24, BLACK, WHITE);
+    } else {
+        time_from_epoch(Data.timestamp, time_str, sizeof(time_str));
+        GUI_DisString_EN(0, 320, time_str, &Font24, BLACK, WHITE);
+    }
     
     // Print course under speed
     // char courseStr[20];

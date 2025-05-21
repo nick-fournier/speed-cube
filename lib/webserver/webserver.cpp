@@ -1,8 +1,6 @@
 #include "webserver.h"
 #include "gps_data.h"
-#include "index_html.h"
-#include "uPlot_iife_min_js.h"
-#include "uPlot_min_css.h"
+#include "index_inlined_html.h"
 
 #include "pico/cyw43_arch.h"
 #include "lwip/tcp.h"
@@ -38,8 +36,8 @@ struct StreamedHttpResponse {
 
 std::string get_html_page() {
     return std::string(reinterpret_cast<const char*>
-        (index_html),
-        index_html_len
+        (index_inlined_html),
+        index_inlined_html_len
     );
 }
 
@@ -93,11 +91,12 @@ static err_t on_stream_sent(void* arg, struct tcp_pcb* tpcb, u16_t len) {
     return ERR_OK;
 }
 
-static void send_http_response(struct tcp_pcb* tpcb, const std::string& body, const char* content_type = "application/json") {
+static void send_http_response(struct tcp_pcb* tpcb, const std::string& body, const char* content_type) {
     char hdr[128];
     int h = snprintf(hdr, sizeof(hdr),
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: %s\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
         "Content-Length: %u\r\n"
         "\r\n",
         content_type, (unsigned)body.size());
@@ -116,6 +115,7 @@ void send_streaming_http_response(struct tcp_pcb* tpcb, const uint8_t* data, siz
     int h = snprintf(hdr, sizeof(hdr),
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: %s\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
         "Content-Length: %zu\r\n"
         "\r\n", content_type, len);
 
@@ -158,70 +158,41 @@ static err_t tcp_recv_cb(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t 
         return 0;
     };
 
-    if (strncmp(req, "GET /location", 9) == 0) {
-        std::ostringstream json;
-        mutex_enter_blocking(&raw_data_mutex);
-        GPSFix raw = raw_data;
-        mutex_exit(&raw_data_mutex);
-
-        mutex_enter_blocking(&filtered_data_mutex);
-        GPSFix filtered = filtered_data;
-        mutex_exit(&filtered_data_mutex);
-
-        json << "{"
-             << "\"raw\": {\"lat\":" << raw.lat << ",\"lon\":" << raw.lon << "},"
-             << "\"filtered\": {\"lat\":" << filtered.lat << ",\"lon\":" << filtered.lon << "}"
-             << "}";
-
-        // send_http_response(tpcb, json.str());
-        
-        std::string body = json.str();
-        size_t len = body.size();
-
-        auto* copy = new uint8_t[len];
-        memcpy(copy, body.c_str(), len);
-
-        send_streaming_http_response(tpcb, copy, len, "application/json");
-
-    } else if (strncmp(req, "GET /buffer", 11) == 0) {
+    if (strncmp(req, "GET /data", 9) == 0) {
         uint32_t after_ts = extract_after_timestamp(req);
         std::ostringstream json;
-        json << "[";
-
+    
         mutex_enter_blocking(&gps_buffer_mutex);
         size_t head = gps_buffer_index;
         size_t count = gps_buffer_count;
-        bool first = true;
-
+    
         for (size_t i = 0; i < count; ++i) {
             size_t idx = (head + GPS_BUFFER_SIZE - count + i) % GPS_BUFFER_SIZE;
-            const GPSFix& raw_fix = gps_buffer[idx].raw;
-            const GPSFix& filtered_fix = gps_buffer[idx].filtered;
-
-            if (after_ts == 0 || raw_fix.timestamp > after_ts) {
-            if (!first) json << ",";
-            json << "{"
-                 << "\"raw\":{\"lat\":" << raw_fix.lat
-                 << ",\"lon\":" << raw_fix.lon
-                 << ",\"timestamp\":" << raw_fix.timestamp << "},"
-                 << "\"filtered\":{\"lat\":" << filtered_fix.lat
-                 << ",\"lon\":" << filtered_fix.lon
-                 << ",\"timestamp\":" << filtered_fix.timestamp << "}"
-                 << "}";
-            first = false;
+            const GPSBuffer& gps_fix = gps_buffer[idx];
+    
+            if (after_ts == 0 || gps_fix.timestamp > after_ts) {
+                json << "{"
+                     << "\"timestamp\":" << gps_fix.timestamp
+                     << ",\"raw\":{\"lat\":" << gps_fix.raw.lat
+                     << ",\"lon\":" << gps_fix.raw.lon
+                     << ",\"speed\":" << gps_fix.raw.speed
+                     << ",\"course\":" << gps_fix.raw.course
+                     << "},\"filtered\":{\"lat\":" << gps_fix.filtered.lat
+                     << ",\"lon\":" << gps_fix.filtered.lon
+                     << ",\"speed\":" << gps_fix.filtered.speed
+                     << ",\"course\":" << gps_fix.filtered.course
+                     << "}}\n";
             }
         }
         mutex_exit(&gps_buffer_mutex);
-
-        json << "]";
-        // send_http_response(tpcb, json.str());
+    
         send_streaming_http_response(
             tpcb,
             reinterpret_cast<const uint8_t*>(json.str().c_str()),
             json.str().size(),
-            "application/json"
+            // "application/x-ndjson"
+            "text/plain"
         );
-
     } else if (strncmp(req, "GET / ", 6) == 0 || strncmp(req, "GET /HTTP", 9) == 0) {
         std::string html = get_html_page();
         // send_http_response(tpcb, html, "text/html");
@@ -231,22 +202,6 @@ static err_t tcp_recv_cb(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t 
             html.size(),
             "text/html"
         );
-
-    } else if (strncmp(req, "GET /uplot.js", 13) == 0) {
-        send_streaming_http_response(
-            tpcb,
-            uPlot_iife_min_js,
-            uPlot_iife_min_js_len,
-            "application/javascript"
-        );
-        tcp_recved(tpcb, p->tot_len);
-        pbuf_free(p);
-        return ERR_OK;
-
-    } else if (strncmp(req, "GET /uplot.css", 14) == 0) {
-        send_http_response(tpcb,
-            std::string(reinterpret_cast<const char*>(uPlot_min_css), uPlot_min_css_len),
-            "text/css");
 
     } else {
         const char* not_found = "HTTP/1.1 404 Not Found\r\n\r\n";

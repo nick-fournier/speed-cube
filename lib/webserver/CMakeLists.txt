@@ -8,38 +8,28 @@ set(HTML_INPUT ${STATIC_DIR}/index.html)
 set(JS_INPUT   ${STATIC_DIR}/uPlot.iife.min.js)
 set(CSS_INPUT   ${STATIC_DIR}/uPlot.min.css)
 
-set(HTML_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/index_html.h)
-set(JS_OUTPUT   ${CMAKE_CURRENT_SOURCE_DIR}/uPlot_iife_min_js.h)
-set(CSS_OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/uPlot_min_css.h)
+set(HTML_INLINED  ${STATIC_DIR}/index.inlined.html)
+set(HTML_OUTPUT   ${CMAKE_CURRENT_SOURCE_DIR}/index_inlined_html.h)
 
-# Custom commands to generate headers using xxd
+add_custom_command(
+    OUTPUT ${HTML_INLINED}
+    COMMAND ${CMAKE_COMMAND} -E echo "Embedding JS and CSS into index.html"
+    COMMAND ${CMAKE_COMMAND} -E env python3 ${CMAKE_CURRENT_SOURCE_DIR}/embed_assets.py
+        ${HTML_INPUT} ${CSS_INPUT} ${JS_INPUT} ${HTML_INLINED}
+    DEPENDS ${HTML_INPUT} ${JS_INPUT} ${CSS_INPUT}
+    COMMENT "Inlining JS and CSS into HTML"
+)
+
 add_custom_command(
     OUTPUT ${HTML_OUTPUT}
-    COMMAND xxd -i index.html > ${HTML_OUTPUT}
+    COMMAND xxd -i index.inlined.html > ${HTML_OUTPUT}
     WORKING_DIRECTORY ${STATIC_DIR}
-    DEPENDS ${HTML_INPUT}
-    COMMENT "Embedding index.html as C header"
+    DEPENDS ${HTML_INLINED}
+    COMMENT "Embedding inlined HTML as C header"
 )
 
-add_custom_command(
-    OUTPUT ${JS_OUTPUT}
-    COMMAND xxd -i uPlot.iife.min.js > ${JS_OUTPUT}
-    WORKING_DIRECTORY ${STATIC_DIR}
-    DEPENDS ${JS_INPUT}
-    COMMENT "Embedding uPlot.iife.min.js as C header"
-)
-
-add_custom_command(
-    OUTPUT ${CSS_OUTPUT}
-    COMMAND xxd -i uPlot.min.css > ${CSS_OUTPUT}
-    WORKING_DIRECTORY ${STATIC_DIR}
-    DEPENDS ${CSS_INPUT}
-    COMMENT "Embedding uPlot.min.css as C header"
-)
-
-# Target to force rebuild if needed
 add_custom_target(generate_webserver_static
-    DEPENDS ${HTML_OUTPUT} ${JS_OUTPUT} ${CSS_OUTPUT}
+    DEPENDS ${HTML_OUTPUT}
 )
 
 # Add the library

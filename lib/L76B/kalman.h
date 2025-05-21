@@ -10,6 +10,7 @@ class KalmanFilter {
 public:
     KalmanFilter();
 
+    void init(float lat_deg, float lon_deg, float speed_mps, float course_deg);
     void predict(float dt);
     void update(float lat_deg, float lon_deg, float speed_mps, float course_deg);
 
@@ -25,6 +26,7 @@ private:
     Eigen::Matrix4d R;      // Measurement noise
     Eigen::Matrix4d I;      // Identity matrix
 
+    bool initialized = false;
     float deg2rad(float deg) const;
     float rad2deg(float rad) const;
 };

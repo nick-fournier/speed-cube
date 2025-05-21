@@ -45,19 +45,18 @@ void update_gps_buffer(
     GPSBuffer& slot = gps_buffer[gps_buffer_index];
 
     // Update the slot with the latest raw and filtered data
+    slot.timestamp = raw_data.timestamp;
+
+    // Update the raw and filtered data
     slot.raw.lat = raw_data.lat;
     slot.raw.lon = raw_data.lon;
     slot.raw.speed = raw_data.speed;
     slot.raw.course = raw_data.course;
-    slot.raw.timestamp = raw_data.timestamp;
-    slot.raw.status = raw_data.status;
 
     slot.filtered.lat = filtered_data.lat;
     slot.filtered.lon = filtered_data.lon;
     slot.filtered.speed = filtered_data.speed;
     slot.filtered.course = filtered_data.course;
-    slot.filtered.timestamp = filtered_data.timestamp;
-    slot.filtered.status = filtered_data.status;
 
     // Iterate the buffer index
     gps_buffer_index = (gps_buffer_index + 1) % GPS_BUFFER_SIZE;

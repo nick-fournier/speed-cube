@@ -15,10 +15,20 @@ struct GPSFix {
 
 // Dual buffer of raw and filtered data
 struct GPSBuffer {
-    GPSFix raw;      // Raw data from NMEA parser
-    GPSFix filtered; // Filtered data from Kalman filter
+    uint32_t timestamp; // Timestamp in seconds since epoch
+    struct {
+        float lat;      // Latitude in decimal degrees
+        float lon;      // Longitude in decimal degrees
+        float speed;     // Speed in knots
+        float course;    // Course in degrees
+    } filtered; // Filtered data from Kalman filter
+    struct {
+        float lat;      // Latitude in decimal degrees
+        float lon;      // Longitude in decimal degrees
+        float speed;     // Speed in knots
+        float course;    // Course in degrees
+    } raw;      // Raw data from NMEA parser
 };
-
 
 // Array of GPS data
 extern GPSBuffer gps_buffer[GPS_BUFFER_SIZE];

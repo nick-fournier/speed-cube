@@ -1,24 +1,43 @@
 #include "kalman.h"
 
+#include "kalman.h"
+
 KalmanFilter::KalmanFilter() {
+    // Initialize state vector to zero
     x.setZero();
-    P.setIdentity();
-    Q.setZero();
-    R.setZero();
+
+    // Identity matrix for later use
     I.setIdentity();
 
-    // Process noise
-    Q(0,0) = 0.01;  // lat
-    Q(1,1) = 0.01;  // lon
-    Q(2,2) = 0.1;   // speed
-    Q(3,3) = 0.1;   // course
+    // Initialize state covariance matrix (high uncertainty)
+    P.setIdentity();
+    P *= 100.0;  // Large initial uncertainty before init()
 
-    // Measurement noise
-    R(0,0) = 1.0;   // lat
-    R(1,1) = 1.0;   // lon
-    R(2,2) = 0.2;   // speed
-    R(3,3) = 3.0;   // course
+    // Set process noise covariance Q (tune as needed)
+    Q.setZero();
+    Q(0,0) = 0.01;  // Latitude process noise
+    Q(1,1) = 0.01;  // Longitude process noise
+    Q(2,2) = 0.1;   // Speed process noise
+    Q(3,3) = 0.1;   // Course process noise
+
+    // Set measurement noise covariance R (tune based on GPS noise)
+    R.setZero();
+    R(0,0) = 1.0;   // Latitude measurement noise
+    R(1,1) = 1.0;   // Longitude measurement noise
+    R(2,2) = 0.2;   // Speed measurement noise
+    R(3,3) = 3.0;   // Course measurement noise
 }
+
+void KalmanFilter::init(float lat_deg, float lon_deg, float speed_mps, float course_deg) {
+    
+    // Set initial state directly
+    x << lat_deg, lon_deg, speed_mps, course_deg;
+
+    // Set small uncertainty after initialization
+    P.setIdentity();
+    P *= 0.1;  // Trusted initial guess
+}
+
 
 void KalmanFilter::predict(float dt) {
     float lat_rad = deg2rad(x(0));
@@ -50,6 +69,12 @@ void KalmanFilter::predict(float dt) {
 void KalmanFilter::update(
     float lat_deg, float lon_deg, float speed_mps, float course_deg
 ) {
+    if (!initialized) {
+        init(lat_deg, lon_deg, speed_mps, course_deg);
+        initialized = true;
+        return;
+    }
+
     Eigen::Vector4d z;
     z << lat_deg, lon_deg, speed_mps, course_deg;
 
