@@ -23,8 +23,8 @@ void NavigationGUI::init() {
     GUI_DrawLine(0, 310, 320, 310, WHITE, LINE_SOLID, DOT_PIXEL_1X1);
 
     // Draw labels
-    GUI_DisString_EN(100, 50, "kts (VMG)", &Font20, BLACK, WHITE);
-    GUI_DisString_EN(100, 155, "kts (SOG)", &Font20, BLACK, WHITE);
+    GUI_DisString_EN(100, 60, "kts (VMG)", &Font20, BLACK, WHITE);
+    GUI_DisString_EN(100, 175, "kts (SOG)", &Font20, BLACK, WHITE);
 }
 
 void NavigationGUI::update(GPSFix Data) {
@@ -45,33 +45,29 @@ void NavigationGUI::update(GPSFix Data) {
     char speedStr[8];
     char vmgStr[8];
 
-    // Make VMG absolute value, but store the sign
-    float vmg_sign = vmg < 0 ? -1 : 1;
+    // Store the sign of VMG as a string
+    char vmg_sign[2] = { (vmg < 0 ? '-' : ' '), '\0' };
+    // float vmg_sign = vmg < 0 ? -1 : 1;
     vmg = fabs(vmg);
 
     snprintf(speedStr, sizeof(speedStr), "%.1f", Data.speed);
     snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg);
     
-    // Show speed in bottom half of circle
-    GUI_DisString_EN(100, 175, speedStr, &Font72, LCD_BACKGROUND, WHITE);
-
     // Show VMG in top half of circle
-    GUI_DisString_EN(100, 65, vmgStr, &Font72, LCD_BACKGROUND, WHITE);
+    GUI_DisString_EN(100, 75, vmgStr, &Font72, LCD_BACKGROUND, WHITE);
 
     // Show the sign left of the VMG, to keep centered
-    if (vmg_sign < 0) {
-        GUI_DisString_EN(60, 65, "-", &Font72, LCD_BACKGROUND, WHITE);
-    } else {
-        GUI_DisString_EN(60, 65, " ", &Font72, LCD_BACKGROUND, WHITE);
-    }
+    GUI_DisString_EN(60, 75, vmg_sign, &Font72, LCD_BACKGROUND, WHITE);
 
+    // Show speed in bottom half of circle
+    GUI_DisString_EN(120, 200, speedStr, &Font48, LCD_BACKGROUND, WHITE);
 
     // Print timestamp
     char time_str[10];
     
     // If Data.timestamp is 0, report "No GPS fix" to display
     if (Data.timestamp == 0) {
-        snprintf(time_str, sizeof(time_str), "No GPS fix");
+        snprintf(time_str, sizeof(time_str), "No GPS...");
         GUI_DisString_EN(0, 320, time_str, &Font24, BLACK, WHITE);
     } else {
         time_from_epoch(Data.timestamp, time_str, sizeof(time_str));

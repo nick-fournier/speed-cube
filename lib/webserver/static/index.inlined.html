@@ -238,8 +238,8 @@ var uPlot=function(){"use strict";const l="u-off",e="u-label",t="width",n="heigh
       const minY = Math.min(...allY);
       const maxY = Math.max(...allY);
     
-      const padX = (maxX - minX) * 0.05 || 0.01;
-      const padY = (maxY - minY) * 0.05 || 0.01;
+      const padX = (maxX - minX) * 0.001 || 0.0005;
+      const padY = (maxY - minY) * 0.001 || 0.0005;
     
       u.setScale("x", { min: minX - padX, max: maxX + padX });
       u.setScale("y", { min: minY - padY, max: maxY + padY });

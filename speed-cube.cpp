@@ -61,7 +61,7 @@ void update_gps_buffer(
     // Iterate the buffer index
     gps_buffer_index = (gps_buffer_index + 1) % GPS_BUFFER_SIZE;
 
-    // ✅ Only increase count if buffer isn’t already full
+    // Only increase count if buffer isn’t already full
     if (gps_buffer_count < GPS_BUFFER_SIZE) {
         gps_buffer_count++;
     }
