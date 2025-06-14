@@ -19,12 +19,13 @@ void NavigationGUI::init() {
 
     // Draw a circle in the top half of the screen
     // Screen is 320 x 480
-    GUI_DrawCircle(160, 150, 130, WHITE, DRAW_EMPTY, DOT_PIXEL_2X2);
-    GUI_DrawLine(0, 310, 320, 310, WHITE, LINE_SOLID, DOT_PIXEL_1X1);
+    // GUI_DrawCircle(160, 150, 130, WHITE, DRAW_EMPTY, DOT_PIXEL_2X2);
+    GUI_DrawLine(0, 280, 320, 280, WHITE, LINE_SOLID, DOT_PIXEL_1X1);
 
     // Draw labels
-    GUI_DisString_EN(100, 60, "kts (VMG)", &Font20, BLACK, WHITE);
-    GUI_DisString_EN(100, 175, "kts (SOG)", &Font20, BLACK, WHITE);
+    GUI_DisString_EN(100, 40, "VMG (kt)", &Font20, BLACK, WHITE);
+    GUI_DisString_EN(10, 175, "SOG", &Font20, BLACK, WHITE);
+    GUI_DisString_EN(260, 175, "COG", &Font20, BLACK, WHITE);
 }
 
 void NavigationGUI::update(GPSFix Data) {
@@ -36,31 +37,44 @@ void NavigationGUI::update(GPSFix Data) {
     );
 
     // Draw target bearing indicator
-    updateMarkPointer(target_bearing);
+    // updateMarkPointer(target_bearing);
 
-    // Calculate VMG
+    // Calculate VMG and store the sign as a character
     float vmg = calculateVMG(Data.speed, Data.course, target_bearing);
+    char vmg_sign[2] = { (vmg < 0 ? '-' : ' '), '\0' };
+    vmg = fabs(vmg);
 
     // Format speed floats as strings
     char speedStr[8];
     char vmgStr[8];
+    char courseStr[8];
+    char markStr[20];
 
-    // Store the sign of VMG as a string
-    char vmg_sign[2] = { (vmg < 0 ? '-' : ' '), '\0' };
-    // float vmg_sign = vmg < 0 ? -1 : 1;
-    vmg = fabs(vmg);
+    // Store the current target mark name as string with prefix
+    snprintf(markStr, sizeof(markStr), "->%s", current_target.name);
 
+    // Get length of string
+    int mark_str_len = 18 * strlen(markStr);
+
+    // Format the strings with one decimal place
     snprintf(speedStr, sizeof(speedStr), "%.1f", Data.speed);
-    snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg);
-    
-    // Show VMG in top half of circle
-    GUI_DisString_EN(100, 75, vmgStr, &Font72, LCD_BACKGROUND, WHITE);
+    snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg);    
+    snprintf(courseStr, sizeof(courseStr), "%03d", static_cast<int>(round(Data.course)));
+
+    // Show the current target mark
+    GUI_DisString_EN(320 - mark_str_len, 0, markStr, &Font24, BLACK, WHITE);
+
+    // Show VMG in top
+    GUI_DisString_EN(70, 60, vmgStr, &Font96, LCD_BACKGROUND, WHITE);
 
     // Show the sign left of the VMG, to keep centered
-    GUI_DisString_EN(60, 75, vmg_sign, &Font72, LCD_BACKGROUND, WHITE);
+    GUI_DisString_EN(10, 60, vmg_sign, &Font96, LCD_BACKGROUND, WHITE);
 
-    // Show speed in bottom half of circle
-    GUI_DisString_EN(120, 200, speedStr, &Font48, LCD_BACKGROUND, WHITE);
+    // Show speed over ground
+    GUI_DisString_EN(10, 200, speedStr, &Font48, LCD_BACKGROUND, WHITE);
+
+    // Show course over ground
+    GUI_DisString_EN(220, 200, courseStr, &Font48, LCD_BACKGROUND, WHITE);
 
     // Print timestamp
     char time_str[10];
@@ -68,11 +82,10 @@ void NavigationGUI::update(GPSFix Data) {
     // If Data.timestamp is 0, report "No GPS fix" to display
     if (Data.timestamp == 0) {
         snprintf(time_str, sizeof(time_str), "No GPS...");
-        GUI_DisString_EN(0, 320, time_str, &Font24, BLACK, WHITE);
     } else {
         time_from_epoch(Data.timestamp, time_str, sizeof(time_str));
-        GUI_DisString_EN(0, 320, time_str, &Font24, BLACK, WHITE);
     }
+    GUI_DisString_EN(0, 0, time_str, &Font24, BLACK, WHITE);
     
     // Print course under speed
     // char courseStr[20];
