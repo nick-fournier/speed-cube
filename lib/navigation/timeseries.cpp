@@ -32,6 +32,18 @@ float TimeSeriesPlot::getLastSOG() const {
     return m_plotData[lastIndex].sog;
 }
 
+// Check if enough time has elapsed to update the plot
+bool TimeSeriesPlot::shouldUpdate(uint32_t currentTime) const {
+    // If this is the first update, always update
+    if (m_lastVisualUpdate == 0) return true;
+    
+    // Calculate elapsed time in seconds
+    uint32_t elapsedSecs = currentTime - m_lastVisualUpdate;
+    
+    // Update if enough time has elapsed
+    return elapsedSecs >= m_updateIntervalSecs;
+}
+
 // Clear the plot area (only the data area to reduce flickering)
 void TimeSeriesPlot::clearPlotArea() {
     // Clear only the data area with a black rectangle, leaving axes and labels intact
@@ -82,11 +94,11 @@ void TimeSeriesPlot::drawPlot() {
     int legendX = X_START + (WIDTH / 2) - 70; // Center position
     
     // Draw legend
-    GUI_DrawLine(legendX, Y_START - 10, legendX + 20, Y_START - 10, CYAN, LINE_SOLID, DOT_PIXEL_2X2);
-    GUI_DisString_EN(legendX + 25, Y_START - 15, "VMG", &Font16, BLACK, WHITE);
+    GUI_DrawLine(legendX, Y_START - 12, legendX + 20, Y_START - 12, CYAN, LINE_SOLID, DOT_PIXEL_1X1);
+    GUI_DisString_EN(legendX + 25, Y_START - 18, "VMG", &Font16, BLACK, WHITE);
     
-    GUI_DrawLine(legendX + 70, Y_START - 10, legendX + 90, Y_START - 10, YELLOW, LINE_SOLID, DOT_PIXEL_2X2);
-    GUI_DisString_EN(legendX + 95, Y_START - 15, "SOG", &Font16, BLACK, WHITE);
+    GUI_DrawLine(legendX + 70, Y_START - 12, legendX + 90, Y_START - 12, YELLOW, LINE_SOLID, DOT_PIXEL_1X1);
+    GUI_DisString_EN(legendX + 95, Y_START - 18, "SOG", &Font16, BLACK, WHITE);
     
     // If no data points, just return after drawing the axes and labels
     if (m_dataCount == 0) {
@@ -125,7 +137,7 @@ void TimeSeriesPlot::drawPlot() {
             y1 = (y1 < Y_START) ? Y_START : (y1 > Y_END) ? Y_END : y1;
             y2 = (y2 < Y_START) ? Y_START : (y2 > Y_END) ? Y_END : y2;
             
-            GUI_DrawLine(x1, y1, x2, y2, CYAN, LINE_SOLID, DOT_PIXEL_2X2);
+            GUI_DrawLine(x1, y1, x2, y2, CYAN, LINE_SOLID, DOT_PIXEL_1X1);
         }
         
         // Draw SOG data series
@@ -154,7 +166,7 @@ void TimeSeriesPlot::drawPlot() {
             y1 = (y1 < Y_START) ? Y_START : (y1 > Y_END) ? Y_END : y1;
             y2 = (y2 < Y_START) ? Y_START : (y2 > Y_END) ? Y_END : y2;
             
-            GUI_DrawLine(x1, y1, x2, y2, YELLOW, LINE_SOLID, DOT_PIXEL_2X2);
+            GUI_DrawLine(x1, y1, x2, y2, YELLOW, LINE_SOLID, DOT_PIXEL_1X1);
         }
     }
 }

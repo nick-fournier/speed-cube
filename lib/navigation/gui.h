@@ -45,6 +45,9 @@ class NavigationGUI {
         // Accessors
         float getTargetBearing() const { return target_bearing; }
         const Target& getCurrentTarget() const { return current_target; }
+        
+        // Configure time series plot
+        void setTimeSeriesUpdateInterval(uint32_t seconds);
     
     private:
         // Friend declarations

@@ -24,7 +24,7 @@ private:
     NavigationGUI* gui;
     TimeSeriesPlot* m_timeSeries;
     uint32_t m_timestamp = 1000; // Base timestamp for simulated data
-    bool m_isActive = true;      // Flag to control simulation
+    bool m_isActive = false;      // Flag to control simulation
 };
 
 #endif // SIMULATION_H

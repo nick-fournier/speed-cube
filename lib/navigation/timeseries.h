@@ -35,12 +35,21 @@ public:
     float getLastSOG() const;
     uint32_t getLastUpdateTime() const { return m_lastUpdate; }
     
+    // Update interval configuration
+    void setUpdateInterval(uint32_t seconds) { m_updateIntervalSecs = seconds; }
+    uint32_t getUpdateInterval() const { return m_updateIntervalSecs; }
+    bool shouldUpdate(uint32_t currentTime) const;
+    void updateLastVisualTimestamp(uint32_t timestamp) { m_lastVisualUpdate = timestamp; }
+    uint32_t getLastVisualUpdateTime() const { return m_lastVisualUpdate; }
+    
 private:
     NavigationGUI* m_gui;
     PlotDataPoint m_plotData[DATA_POINTS]; // Circular buffer for plot data
     int m_dataIndex = 0;      // Current index in the circular buffer
     int m_dataCount = 0;      // Number of valid data points
     uint32_t m_lastUpdate = 0; // Last time the plot was updated
+    uint32_t m_lastVisualUpdate = 0; // Last time the plot was visually updated
+    uint32_t m_updateIntervalSecs = 1; // Update interval in seconds (default: 1 second)
 };
 
 #endif // TIMESERIES_H

@@ -41,6 +41,12 @@ void NavigationGUI::init() {
     m_timeSeries->drawPlot();
 }
 
+// Set the update interval for the time series plot
+void NavigationGUI::setTimeSeriesUpdateInterval(uint32_t seconds) {
+    printf("Setting time series update interval to %u seconds\n", seconds);
+    m_timeSeries->setUpdateInterval(seconds);
+}
+
 void NavigationGUI::update(GPSFix data) {
     // Store the data
     Data = data;
@@ -107,7 +113,7 @@ void NavigationGUI::update(GPSFix data) {
     }
     GUI_DisString_EN(0, 0, time_str, &Font24, BLACK, WHITE);
     
-    // Update plot data and redraw plot (once per second)
+    // Always add data points when they arrive (to maintain data accuracy)
     uint32_t lastPlotUpdate = m_timeSeries->getLastUpdateTime();
     if (Data.timestamp != lastPlotUpdate && Data.timestamp > 0) {
         // Only add a data point if not in simulation mode (simulation already added it)
@@ -115,11 +121,19 @@ void NavigationGUI::update(GPSFix data) {
             m_timeSeries->addDataPoint(vmg, Data.speed, Data.timestamp);
         }
         
-        // Only clear the data area, not the axes and labels
-        m_timeSeries->clearPlotArea();
+        // Only update the visual display when it's time to update based on the configured interval
+        bool shouldUpdateNow = m_timeSeries->shouldUpdate(Data.timestamp);
         
-        // Draw the plot
-        m_timeSeries->drawPlot();
+        if (shouldUpdateNow) {
+            // Only clear the data area, not the axes and labels
+            m_timeSeries->clearPlotArea();
+            
+            // Draw the plot
+            m_timeSeries->drawPlot();
+            
+            // Update the last visual update timestamp
+            m_timeSeries->updateLastVisualTimestamp(Data.timestamp);
+        }
     }
 }
 

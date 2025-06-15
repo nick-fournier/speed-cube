@@ -92,6 +92,8 @@ int main() {
 
     server.start();
 
+    // Set time series update interval to 10 seconds
+    navGui.setTimeSeriesUpdateInterval(10);
     navGui.init();
     multicore_launch_core1(core1_main);
     static uint32_t last_logged_timestamp = 0;
