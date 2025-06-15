@@ -35,10 +35,7 @@ void NavigationGUI::init() {
     GUI_DisString_EN(100, 40, "VMG (kt)", &Font20, BLACK, WHITE);
     GUI_DisString_EN(10, 175, "SOG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(260, 175, "COG", &Font20, BLACK, WHITE);
-    
-    // Add initial simulated data points (just a few)
-    m_simulation->addSimulatedData();
-    
+
     // Initialize plot area and draw initial plot
     m_timeSeries->clearPlotArea();
     m_timeSeries->drawPlot();
@@ -53,7 +50,7 @@ void NavigationGUI::update(GPSFix data) {
         m_simulation->addIncrementalSimulatedData();
         Data.timestamp = m_simulation->getTimestamp();
         Data.speed = m_timeSeries->getLastSOG();
-        Data.course = 45.0; // Arbitrary course for simulation
+        Data.course = 135.0; // Arbitrary course for simulation
     }
 
     // Update the current bearing to the target mark

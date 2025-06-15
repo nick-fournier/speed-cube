@@ -10,9 +10,6 @@ class Simulation {
 public:
     Simulation(NavigationGUI* gui, TimeSeriesPlot* timeSeries);
     
-    // Add initial simulated data for testing
-    void addSimulatedData();
-    
     // Add incremental simulated data (one point at a time)
     void addIncrementalSimulatedData();
     
