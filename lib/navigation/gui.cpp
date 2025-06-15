@@ -159,3 +159,50 @@ float NavigationGUI::calculateVMG(float speed, float course, float target_bearin
     // Calculate VMG
     return speed * cos(course_rad - target_bearing_rad);
 }
+
+// Cycle to the next target mark
+void NavigationGUI::cycleToNextTarget() {
+    // Safety check - don't proceed if we're in an unstable state
+    static bool is_cycling = false;
+    if (is_cycling) {
+        printf("Already cycling targets, ignoring request\n");
+        return;
+    }
+    
+    is_cycling = true;
+    printf("Cycling to next target mark\n");
+    
+    // Find the current index in the marks array
+    int current_index = 0;
+    for (int i = 0; i < 8; i++) {
+        if (strcmp(current_target.name, marks[i].name) == 0) {
+            current_index = i;
+            break;
+        }
+    }
+    
+    // Increment index and wrap around if needed
+    int next_index = (current_index + 1) % 8;
+    
+    // Update the current target
+    current_target = marks[next_index];
+    printf("New target: %s\n", current_target.name);
+    
+    // Recalculate the bearing to the new target if we have valid GPS data
+    if (Data.status) {
+        target_bearing = calculateBearing(
+            Data.lat, Data.lon,
+            current_target.lat, current_target.lon
+        );
+        printf("New bearing: %.1f degrees\n", target_bearing);
+    }
+    
+    // Clear the area where the mark name is displayed and redraw
+    GUI_DrawRectangle(320 - 18 * 10, 0, 320, 24, LCD_BACKGROUND, DRAW_FULL, DOT_PIXEL_1X1);
+    char markStr[20];
+    snprintf(markStr, sizeof(markStr), "->%s", current_target.name);
+    int mark_str_len = 18 * strlen(markStr);
+    GUI_DisString_EN(320 - mark_str_len, 0, markStr, &Font24, BLACK, WHITE);
+    
+    is_cycling = false;
+}

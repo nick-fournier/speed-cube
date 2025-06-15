@@ -4,12 +4,21 @@
 #include "pico/multicore.h"
 #include "hardware/watchdog.h"
 #include "pico/cyw43_arch.h"
+#include "hardware/gpio.h"
 
 #include "L76B.h"
 #include "navigation/gui.h"
 #include "webserver.h"
 #include "gps_data.h"  // defines externs for filtered/raw data and mutexes
 #include "config.h"
+
+// Define the GPIO pin for the button
+const uint BUTTON_PIN = 2;  // Using GPIO pin 2 as specified by user
+
+// Debounce time in milliseconds
+const uint32_t DEBOUNCE_TIME_MS = 50;  // Further reduced to 50ms for even better responsiveness
+static uint32_t last_button_time = 0;
+static bool last_button_state = false;  // Track previous button state for edge detection
 
 L76B l76b;
 KalmanFilter kf;
@@ -81,6 +90,13 @@ int main() {
     mutex_init(&raw_data_mutex);
     mutex_init(&gps_buffer_mutex);
 
+    // Initialize the button pin
+    printf("Setting up button on GPIO %d...\n", BUTTON_PIN);
+    gpio_init(BUTTON_PIN);
+    gpio_set_dir(BUTTON_PIN, GPIO_IN);
+    gpio_pull_up(BUTTON_PIN);  // Enable pull-up resistor
+    printf("Button setup complete\n");
+
     // Start webserver using filtered data
     WebServer server(
         filtered_data,
@@ -136,6 +152,22 @@ int main() {
             printf("Waiting for raw GPS fix...\n");
         }
 
+        // Check button state (polling approach)
+        // Button is active low (pressed when GPIO reads 0) due to pull-up resistor
+        bool button_pressed = !gpio_get(BUTTON_PIN);
+        uint32_t current_time = to_ms_since_boot(get_absolute_time());
+        
+        // Edge detection - only trigger on button press (not release)
+        // and only if enough time has passed since the last press (debouncing)
+        if (button_pressed && !last_button_state && (current_time - last_button_time > DEBOUNCE_TIME_MS)) {
+            printf("Button pressed, cycling to next target\n");
+            navGui.cycleToNextTarget();
+            last_button_time = current_time;  // Update the last button press time
+        }
+        
+        // Update last button state for next iteration
+        last_button_state = button_pressed;
+
         // Print both to the console for debugging
         // printf("[RAW] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
         //     raw_snapshot.time,
@@ -147,7 +179,7 @@ int main() {
         //     filtered_snapshot.lat, filtered_snapshot.lon,
         //     filtered_snapshot.speed, filtered_snapshot.course);
 
-        sleep_ms(200);  // GUI + print update rate
+        sleep_ms(10);  // Further reduced sleep time for even more responsive button polling
     }
 
     return 0;
