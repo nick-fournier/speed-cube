@@ -8,6 +8,8 @@ NavigationGUI::NavigationGUI() {
     m_timeSeries = new TimeSeriesPlot(this);
     m_simulation = new Simulation(this, m_timeSeries);
     m_pointers = new Pointers(this);
+    
+    // TackDetector is initialized with its constructor
 }
 
 NavigationGUI::~NavigationGUI() {
@@ -35,6 +37,7 @@ void NavigationGUI::init() {
     GUI_DisString_EN(100, 40, "VMG (kt)", &Font20, BLACK, WHITE);
     GUI_DisString_EN(10, 175, "SOG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(260, 175, "COG", &Font20, BLACK, WHITE);
+    GUI_DisString_EN(130, 175, "TACK", &Font20, BLACK, WHITE);
 
     // Initialize plot area and draw initial plot
     m_timeSeries->clearPlotArea();
@@ -64,6 +67,12 @@ void NavigationGUI::update(GPSFix data) {
         Data.lat, Data.lon,
         current_target.lat, current_target.lon
     );
+    
+    // Update tack detector with current heading, speed, and timestamp
+    if (Data.status) {
+        uint32_t current_time = to_ms_since_boot(get_absolute_time());
+        m_tackDetector.update(Data.course, Data.speed, current_time);
+    }
 
     // Calculate VMG and store the sign as a character
     float vmg = calculateVMG(Data.speed, Data.course, target_bearing);
@@ -97,10 +106,18 @@ void NavigationGUI::update(GPSFix data) {
     GUI_DisString_EN(10, 60, vmg_sign, &Font96, LCD_BACKGROUND, WHITE);
 
     // Show speed over ground
-    GUI_DisString_EN(10, 200, speedStr, &Font48, LCD_BACKGROUND, WHITE);
+    GUI_DisString_EN(10, 200, speedStr, &Font36, LCD_BACKGROUND, WHITE);
 
     // Show course over ground
-    GUI_DisString_EN(220, 200, courseStr, &Font48, LCD_BACKGROUND, WHITE);
+    GUI_DisString_EN(240, 200, courseStr, &Font36, LCD_BACKGROUND, WHITE);
+    
+    // Show last tack heading if available
+    float last_tack = m_tackDetector.getLastTackHeading();
+    char tackHeadingStr[8] = "-"; // Default to "N/A"
+    if (last_tack > 0.0) {
+        snprintf(tackHeadingStr, sizeof(tackHeadingStr), "%03d", static_cast<int>(round(last_tack)));
+    }
+    GUI_DisString_EN(140, 200, tackHeadingStr, &Font36, BLACK, WHITE);
 
     // Print timestamp
     char time_str[10];
@@ -179,18 +196,18 @@ void NavigationGUI::cycleToNextTarget() {
     
     // Find the current index in the marks array
     int current_index = 0;
-    for (int i = 0; i < 8; i++) {
-        if (strcmp(current_target.name, marks[i].name) == 0) {
+    for (size_t i = 0; i < Navigation::MARKS.size(); i++) {
+        if (strcmp(current_target.name, Navigation::MARKS[i].name) == 0) {
             current_index = i;
             break;
         }
     }
     
     // Increment index and wrap around if needed
-    int next_index = (current_index + 1) % 8;
+    int next_index = (current_index + 1) % Navigation::MARKS.size();
     
     // Update the current target
-    current_target = marks[next_index];
+    current_target = Navigation::MARKS[next_index];
     printf("New target: %s\n", current_target.name);
     
     // Recalculate the bearing to the new target if we have valid GPS data

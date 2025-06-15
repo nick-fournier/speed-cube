@@ -108,15 +108,15 @@ int main() {
     printf("Button setup with interrupt complete\n");
 
     // Start webserver using filtered data
-    WebServer server(
-        filtered_data,
-        &filtered_data_mutex,
-        WIFI_MODE,
-        WIFI_SSID,
-        WIFI_PASS
-    );
+    // WebServer server(
+    //     filtered_data,
+    //     &filtered_data_mutex,
+    //     WIFI_MODE,
+    //     WIFI_SSID,
+    //     WIFI_PASS
+    // );
 
-    server.start();
+    // server.start();
 
     // Set time series update interval to 10 seconds
     navGui.setTimeSeriesUpdateInterval(10);
@@ -126,7 +126,7 @@ int main() {
 
     while (true) {
         // Poll the Wi-Fi stack
-        server.poll();
+        // server.poll();
 
         GPSFix raw_snapshot;
         GPSFix filtered_snapshot;
@@ -157,7 +157,8 @@ int main() {
                 last_logged_timestamp = raw_snapshot.timestamp;
             }
 
-            navGui.update(raw_snapshot);
+            // navGui.update(raw_snapshot);
+            navGui.update(filtered_snapshot);
         } else {
             printf("Waiting for raw GPS fix...\n");
         }

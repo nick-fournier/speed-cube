@@ -11,6 +11,7 @@ target_sources(navigation PRIVATE
     simulation.cpp
     timeseries.cpp
     pointers.cpp
+    tack_detector.cpp
 )
 
 # Include directories for the library

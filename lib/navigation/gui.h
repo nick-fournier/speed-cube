@@ -4,6 +4,8 @@
 #include "gps_data.h"
 #include "gps_datetime.h"
 #include "math.h"
+#include "tack_detector.h"
+#include "marks.h"
 
 extern "C" {
     #include "DEV_Config.h"
@@ -28,11 +30,8 @@ class NavigationGUI {
         NavigationGUI();
         ~NavigationGUI();
 
-        struct Target {
-            char name[10];          // Name of the target
-            float lat;             // Latitude in decimal degrees
-            float lon;             // Longitude in decimal degrees
-        };
+        // Use the Mark struct from marks.h
+        using Target = Navigation::Mark;
 
         // Initialization function
         void init();
@@ -45,6 +44,7 @@ class NavigationGUI {
         // Accessors
         float getTargetBearing() const { return target_bearing; }
         const Target& getCurrentTarget() const { return current_target; }
+        float getLastTackHeading() const { return m_tackDetector.getLastTackHeading(); }
         
         // Target selection
         void cycleToNextTarget();
@@ -62,6 +62,7 @@ class NavigationGUI {
         Simulation* m_simulation;
         TimeSeriesPlot* m_timeSeries;
         Pointers* m_pointers;
+        TackDetector m_tackDetector;  // Tack detection and tracking
         
         GPSFix Data;
 
@@ -73,21 +74,9 @@ class NavigationGUI {
         // Internal variables
         float target_bearing = 0.0; // Target bearing in degrees
         float tack_bearing = 0.0;   // Opposing tack bearing in degrees
-
-        // Marks coordinates
-        Target marks[8] = {
-            {"SBYC", 37.77797371, -122.3852661},
-            {"SC1",  37.77555,    -122.3658167},
-            {"NAS1", 37.77725,    -122.3412833},
-            {"NAS2", 37.774183,   -122.3410167},
-            {"YB",   37.79951667, -122.3605167},
-            {"AS1",  37.771383,   -122.3830167},
-            {"34",   37.75835,    -122.3685333},
-            {"33",   37.801,      -122.3477333}
-        };
         
-        // Current target
-        Target current_target = marks[0];
+        // Current target - using the marks from marks.h
+        Target current_target = Navigation::MARKS[0];
 };
 
 #endif
