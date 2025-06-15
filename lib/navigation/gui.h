@@ -13,16 +13,20 @@ extern "C" {
     #include "LCD_Bmp.h"
 }
 
+// Forward declarations
+class Simulation;
+class TimeSeriesPlot;
+class Pointers;
 
 // Define constants for navigation calculations
 static constexpr double DEG2RAD = M_PI / 180.0;
 static constexpr double RAD2DEG = 180.0 / M_PI;
 
-
 class NavigationGUI {
     public:
-        // Constructor
+        // Constructor and destructor
         NavigationGUI();
+        ~NavigationGUI();
 
         struct Target {
             char name[10];          // Name of the target
@@ -33,29 +37,36 @@ class NavigationGUI {
         // Initialization function
         void init();
         void update(GPSFix data);
-
+        
+        // Navigation calculations
+        float calculateBearing(float lat1, float lon1, float lat2, float lon2);
+        float calculateVMG(float speed, float course, float target_bearing);
+        
+        // Accessors
+        float getTargetBearing() const { return target_bearing; }
+        const Target& getCurrentTarget() const { return current_target; }
     
     private:
+        // Friend declarations
+        friend class Simulation;
+        friend class TimeSeriesPlot;
+        friend class Pointers;
+        
+        // Component objects
+        Simulation* m_simulation;
+        TimeSeriesPlot* m_timeSeries;
+        Pointers* m_pointers;
+        
         GPSFix Data;
 
-        // Params
+        // Display parameters
         int centerX = 160;  // Center X coordinate of the display
         int centerY = 150;  // Center Y coordinate of the display
         int radius = 130;   // Radius of the circle
 
-
         // Internal variables
-        float prev_tack_deg = -1;  // -1 indicates "no arrow drawn"
-        float prev_mark_deg = -1;  // -1 indicates "no arrow drawn"
-
         float target_bearing = 0.0; // Target bearing in degrees
         float tack_bearing = 0.0;   // Opposing tack bearing in degrees
-
-        float calculateBearing(float lat1, float lon1, float lat2, float lon2);
-        float calculateVMG(float speed, float course, float target_bearing);
-
-        void updateMarkPointer(float bearing_deg);
-        void updateTackPointer(float bearing_deg);
 
         // Marks coordinates
         Target marks[8] = {
@@ -71,8 +82,6 @@ class NavigationGUI {
         
         // Current target
         Target current_target = marks[0];
-
-    };
-    
+};
 
 #endif

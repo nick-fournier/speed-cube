@@ -1,7 +1,21 @@
 #include "gui.h"
+#include "simulation.h"
+#include "timeseries.h"
+#include "pointers.h"
 
+NavigationGUI::NavigationGUI() {
+    // Create component objects
+    m_timeSeries = new TimeSeriesPlot(this);
+    m_simulation = new Simulation(this, m_timeSeries);
+    m_pointers = new Pointers(this);
+}
 
-NavigationGUI::NavigationGUI() {}
+NavigationGUI::~NavigationGUI() {
+    // Clean up component objects
+    delete m_timeSeries;
+    delete m_simulation;
+    delete m_pointers;
+}
 
 void NavigationGUI::init() {
     // Initialize the GUI
@@ -17,32 +31,41 @@ void NavigationGUI::init() {
     LCD_Init(lcd_scan_dir, 800);
     GUI_Clear(LCD_BACKGROUND);
 
-    // Draw a circle in the top half of the screen
-    // Screen is 320 x 480
-    // GUI_DrawCircle(160, 150, 130, WHITE, DRAW_EMPTY, DOT_PIXEL_2X2);
-    GUI_DrawLine(0, 280, 320, 280, WHITE, LINE_SOLID, DOT_PIXEL_1X1);
-
     // Draw labels
     GUI_DisString_EN(100, 40, "VMG (kt)", &Font20, BLACK, WHITE);
     GUI_DisString_EN(10, 175, "SOG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(260, 175, "COG", &Font20, BLACK, WHITE);
+    
+    // Add initial simulated data points (just a few)
+    m_simulation->addSimulatedData();
+    
+    // Initialize plot area and draw initial plot
+    m_timeSeries->clearPlotArea();
+    m_timeSeries->drawPlot();
 }
 
-void NavigationGUI::update(GPSFix Data) {
+void NavigationGUI::update(GPSFix data) {
+    // Store the data
+    Data = data;
+    
+    // If simulation is active, add incremental simulated data
+    if (m_simulation->isActive()) {
+        m_simulation->addIncrementalSimulatedData();
+        Data.timestamp = m_simulation->getTimestamp();
+        Data.speed = m_timeSeries->getLastSOG();
+        Data.course = 45.0; // Arbitrary course for simulation
+    }
 
     // Update the current bearing to the target mark
-    float target_bearing = calculateBearing(
+    target_bearing = calculateBearing(
         Data.lat, Data.lon,
         current_target.lat, current_target.lon
     );
 
-    // Draw target bearing indicator
-    // updateMarkPointer(target_bearing);
-
     // Calculate VMG and store the sign as a character
     float vmg = calculateVMG(Data.speed, Data.course, target_bearing);
     char vmg_sign[2] = { (vmg < 0 ? '-' : ' '), '\0' };
-    vmg = fabs(vmg);
+    float vmg_abs = fabs(vmg);
 
     // Format speed floats as strings
     char speedStr[8];
@@ -58,7 +81,7 @@ void NavigationGUI::update(GPSFix Data) {
 
     // Format the strings with one decimal place
     snprintf(speedStr, sizeof(speedStr), "%.1f", Data.speed);
-    snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg);    
+    snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg_abs);    
     snprintf(courseStr, sizeof(courseStr), "%03d", static_cast<int>(round(Data.course)));
 
     // Show the current target mark
@@ -87,47 +110,21 @@ void NavigationGUI::update(GPSFix Data) {
     }
     GUI_DisString_EN(0, 0, time_str, &Font24, BLACK, WHITE);
     
-    // Print course under speed
-    // char courseStr[20];
-    // snprintf(courseStr, sizeof(courseStr), "%.2f", data.course);
-    // GUI_DisString_EN(20, 140, courseStr, &Font24, LCD_BACKGROUND, WHITE);
-
-    // printf(
-    //     "Time: %.3f, Lat: %.6f, Lon: %.6f, Speed: %.2f knots, Course: %.2f°\n",
-    //     Data.time, Data.lat, Data.lon, Data.speed, Data.course
-    // );
-}
-
-void NavigationGUI::updateMarkPointer(float bearing_deg)  {
-    // Erase old pointer
-    if (prev_mark_deg >= 0) {
-        GUI_DrawRadialCircle(prev_mark_deg, 10, centerX, centerY, radius + 15, YELLOW);
+    // Update plot data and redraw plot (once per second)
+    uint32_t lastPlotUpdate = m_timeSeries->getLastUpdateTime();
+    if (Data.timestamp != lastPlotUpdate && Data.timestamp > 0) {
+        // Only add a data point if not in simulation mode (simulation already added it)
+        if (!m_simulation->isActive()) {
+            m_timeSeries->addDataPoint(vmg, Data.speed, Data.timestamp);
+        }
+        
+        // Only clear the data area, not the axes and labels
+        m_timeSeries->clearPlotArea();
+        
+        // Draw the plot
+        m_timeSeries->drawPlot();
     }
-
-    // Draw new pointer
-    GUI_DrawRadialCircle(bearing_deg, 10, centerX, centerY, radius + 15, YELLOW);
-    prev_mark_deg = bearing_deg;
 }
-
-void NavigationGUI::updateTackPointer(float bearing_deg) {
-
-    // If bearing on starboard, make pointer green
-    if (bearing_deg > 180) {
-        GUI_DrawRadialTriangle(bearing_deg, radius - 5, centerX, centerY, GREEN, 1);
-    } else {
-        GUI_DrawRadialTriangle(bearing_deg, radius - 5, centerX, centerY, RED, 1);
-    }
-
-    // Erase old pointer
-    if (prev_tack_deg >= 0) {
-        GUI_DrawRadialTriangle(prev_tack_deg, radius - 5, centerX, centerY, BLACK, 1);
-    }
-
-    // Draw new pointer
-    GUI_DrawRadialTriangle(bearing_deg, radius  - 5, centerX, centerY, WHITE, 1);
-    prev_tack_deg = bearing_deg;
-}
-
 
 // Calculate bearing between two points
 float NavigationGUI::calculateBearing(float lat1, float lon1, float lat2, float lon2) {

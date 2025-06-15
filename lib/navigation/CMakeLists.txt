@@ -8,6 +8,9 @@ add_library(navigation STATIC)
 # Specify the source files for the library
 target_sources(navigation PRIVATE
     gui.cpp
+    simulation.cpp
+    timeseries.cpp
+    pointers.cpp
 )
 
 # Include directories for the library
