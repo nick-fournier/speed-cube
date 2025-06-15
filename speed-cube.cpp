@@ -15,10 +15,21 @@
 // Define the GPIO pin for the button
 const uint BUTTON_PIN = 2;  // Using GPIO pin 2 as specified by user
 
-// Debounce time in milliseconds
-const uint32_t DEBOUNCE_TIME_MS = 50;  // Further reduced to 50ms for even better responsiveness
+// Volatile flag for interrupt-based button handling
+static volatile bool button_pressed_flag = false;
 static uint32_t last_button_time = 0;
-static bool last_button_state = false;  // Track previous button state for edge detection
+
+// Interrupt handler for button press
+void button_callback(uint gpio, uint32_t events) {
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    
+    // Simple software debouncing in the interrupt handler
+    if (current_time - last_button_time > 50) {  // 50ms debounce in interrupt
+        button_pressed_flag = true;
+        last_button_time = current_time;
+        printf("Button press detected in interrupt at %u ms\n", current_time);
+    }
+}
 
 L76B l76b;
 KalmanFilter kf;
@@ -27,10 +38,6 @@ NavigationGUI navGui;
 
 extern "C" {
     #include <malloc.h>
-}
-
-void print_heap_stats() {
-    malloc_stats();  // prints to stdout
 }
 
 // Core 1: GPS handling
@@ -90,12 +97,15 @@ int main() {
     mutex_init(&raw_data_mutex);
     mutex_init(&gps_buffer_mutex);
 
-    // Initialize the button pin
-    printf("Setting up button on GPIO %d...\n", BUTTON_PIN);
+    // Initialize the button pin with interrupt
+    printf("Setting up button on GPIO %d with interrupt...\n", BUTTON_PIN);
     gpio_init(BUTTON_PIN);
     gpio_set_dir(BUTTON_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_PIN);  // Enable pull-up resistor
-    printf("Button setup complete\n");
+    
+    // Set up the interrupt - trigger on falling edge (button press)
+    gpio_set_irq_enabled_with_callback(BUTTON_PIN, GPIO_IRQ_EDGE_FALL, true, &button_callback);
+    printf("Button setup with interrupt complete\n");
 
     // Start webserver using filtered data
     WebServer server(
@@ -141,7 +151,7 @@ int main() {
                 raw_snapshot.timestamp != last_logged_timestamp
             ) {
 
-                // print_heap_stats();
+                // malloc_stats();
 
                 update_gps_buffer(raw_snapshot, filtered_snapshot);
                 last_logged_timestamp = raw_snapshot.timestamp;
@@ -152,21 +162,15 @@ int main() {
             printf("Waiting for raw GPS fix...\n");
         }
 
-        // Check button state (polling approach)
-        // Button is active low (pressed when GPIO reads 0) due to pull-up resistor
-        bool button_pressed = !gpio_get(BUTTON_PIN);
-        uint32_t current_time = to_ms_since_boot(get_absolute_time());
-        
-        // Edge detection - only trigger on button press (not release)
-        // and only if enough time has passed since the last press (debouncing)
-        if (button_pressed && !last_button_state && (current_time - last_button_time > DEBOUNCE_TIME_MS)) {
-            printf("Button pressed, cycling to next target\n");
+        // Check if button press flag is set by the interrupt handler
+        if (button_pressed_flag) {
+            // Process the button press
+            printf("Processing button press from interrupt, cycling to next target\n");
             navGui.cycleToNextTarget();
-            last_button_time = current_time;  // Update the last button press time
+            
+            // Clear the flag
+            button_pressed_flag = false;
         }
-        
-        // Update last button state for next iteration
-        last_button_state = button_pressed;
 
         // Print both to the console for debugging
         // printf("[RAW] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
@@ -179,7 +183,7 @@ int main() {
         //     filtered_snapshot.lat, filtered_snapshot.lon,
         //     filtered_snapshot.speed, filtered_snapshot.course);
 
-        sleep_ms(10);  // Further reduced sleep time for even more responsive button polling
+        sleep_ms(5);  // Reduced to 5ms for more frequent button polling
     }
 
     return 0;

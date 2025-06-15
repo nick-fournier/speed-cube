@@ -162,14 +162,19 @@ float NavigationGUI::calculateVMG(float speed, float course, float target_bearin
 
 // Cycle to the next target mark
 void NavigationGUI::cycleToNextTarget() {
-    // Safety check - don't proceed if we're in an unstable state
-    static bool is_cycling = false;
-    if (is_cycling) {
-        printf("Already cycling targets, ignoring request\n");
+    // Use a more reliable approach with a timeout to prevent button lockup
+    static uint32_t last_cycle_time = 0;
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    
+    // Allow cycling if at least 100ms has passed since the last cycle
+    // This is more reliable than a boolean flag that could get stuck
+    if (current_time - last_cycle_time < 100) {
+        printf("Cycling too fast, ignoring request\n");
         return;
     }
     
-    is_cycling = true;
+    // Update the last cycle time
+    last_cycle_time = current_time;
     printf("Cycling to next target mark\n");
     
     // Find the current index in the marks array
@@ -203,6 +208,4 @@ void NavigationGUI::cycleToNextTarget() {
     snprintf(markStr, sizeof(markStr), "->%s", current_target.name);
     int mark_str_len = 18 * strlen(markStr);
     GUI_DisString_EN(320 - mark_str_len, 0, markStr, &Font24, BLACK, WHITE);
-    
-    is_cycling = false;
 }
