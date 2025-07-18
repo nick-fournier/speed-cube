@@ -158,13 +158,33 @@ void L76B::parse(const char* buffer) {
     share();
 }
 
+// Static variable to track last update time
+static float last_update_time = 0;
+
 void L76B::share() {
     // Make raw data available for other threads
     mutex_enter_blocking(&raw_data_mutex);
     raw_data = working_data;
     mutex_exit(&raw_data_mutex);
 
-    // Update Kalman filter
+    // Calculate time delta since last update
+    float current_time = working_data.timestamp;
+    float dt = 0.0;
+    
+    if (last_update_time > 0) {
+        dt = current_time - last_update_time;
+        
+        // Sanity check on dt (in case of timestamp jumps)
+        if (dt > 0 && dt < 10.0) {  // Limit to reasonable values (0-10 seconds)
+            // Predict step - project state forward in time
+            kf.predict(dt);
+        }
+    }
+    
+    // Update last update time
+    last_update_time = current_time;
+
+    // Update step - incorporate new measurements
     kf.update(
         working_data.lat, working_data.lon,
         working_data.speed, working_data.course

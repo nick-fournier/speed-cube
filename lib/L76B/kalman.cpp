@@ -13,19 +13,24 @@ KalmanFilter::KalmanFilter() {
     P.setIdentity();
     P *= 100.0;  // Large initial uncertainty before init()
 
-    // Set process noise covariance Q (tune as needed)
+    // Set process noise covariance Q (increased for better responsiveness)
     Q.setZero();
-    Q(0,0) = 0.01;  // Latitude process noise
-    Q(1,1) = 0.01;  // Longitude process noise
-    Q(2,2) = 0.1;   // Speed process noise
-    Q(3,3) = 0.1;   // Course process noise
+    Q(0,0) = 0.1;   // Latitude process noise (increased from 0.01)
+    Q(1,1) = 0.1;   // Longitude process noise (increased from 0.01)
+    Q(2,2) = 0.5;   // Speed process noise (increased from 0.1)
+    Q(3,3) = 1.0;   // Course process noise (increased from 0.1)
 
-    // Set measurement noise covariance R (tune based on GPS noise)
+    // Set measurement noise covariance R (adjusted for better balance)
     R.setZero();
-    R(0,0) = 1.0;   // Latitude measurement noise
-    R(1,1) = 1.0;   // Longitude measurement noise
-    R(2,2) = 0.2;   // Speed measurement noise
-    R(3,3) = 3.0;   // Course measurement noise
+    R(0,0) = 0.5;   // Latitude measurement noise (decreased from 1.0)
+    R(1,1) = 0.5;   // Longitude measurement noise (decreased from 1.0)
+    R(2,2) = 0.1;   // Speed measurement noise (decreased from 0.2)
+    R(3,3) = 1.0;   // Course measurement noise (decreased from 3.0)
+    
+    // Initialize adaptive parameters
+    adaptiveFactorEnabled = true;
+    adaptiveFactor = 5.0;  // Increased from 1.0 for more aggressive adaptation
+    innovationThreshold = 2.0;
 }
 
 void KalmanFilter::init(float lat_deg, float lon_deg, float speed_mps, float course_deg) {
@@ -75,13 +80,40 @@ void KalmanFilter::update(
         return;
     }
 
+    // Create measurement vector
     Eigen::Vector4d z;
     z << lat_deg, lon_deg, speed_mps, course_deg;
-
+    
+    // Calculate innovation (difference between measurement and prediction)
+    Eigen::Vector4d innovation = z - x;
+    
+    // Apply adaptive filtering if enabled
+    if (adaptiveFactorEnabled) {
+        // Calculate normalized innovation squared (NIS)
+        Eigen::Matrix4d S = P + R;
+        float nis = innovation.transpose() * S.inverse() * innovation;
+        
+        // If NIS exceeds threshold, temporarily increase process noise
+        if (nis > innovationThreshold) {
+            // Store original Q values
+            Eigen::Matrix4d Q_original = Q;
+            
+            // Increase process noise temporarily
+            Q *= adaptiveFactor;
+            
+            // Update state covariance with increased process noise
+            P = P + Q;
+            
+            // Restore original Q values
+            Q = Q_original;
+        }
+    }
+    
+    // Standard Kalman filter update equations
     Eigen::Matrix4d S = P + R;
     Eigen::Matrix4d K = P * S.inverse();
-
-    x = x + K * (z - x);
+    
+    x = x + K * innovation;
     P = (I - K) * P;
 }
 

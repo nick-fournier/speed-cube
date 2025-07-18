@@ -27,6 +27,10 @@ private:
     Eigen::Matrix4d I;      // Identity matrix
 
     bool initialized = false;
+    bool adaptiveFactorEnabled = false;  // Enable/disable adaptive filtering
+    float adaptiveFactor = 1.0;          // Current adaptive factor
+    float innovationThreshold = 2.0;     // Threshold for innovation detection
+    
     float deg2rad(float deg) const;
     float rad2deg(float rad) const;
 };
