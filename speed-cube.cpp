@@ -10,6 +10,7 @@
 #include "navigation/gui.h"
 #include "webserver.h"
 #include "gps_data.h"  // defines externs for filtered/raw data and mutexes
+#include "gps_logger.h"  // GPS logger for CSV logging
 #include "config.h"
 
 // Define the GPIO pin for the button
@@ -34,6 +35,7 @@ void button_callback(uint gpio, uint32_t events) {
 L76B l76b;
 KalmanFilter kf;
 NavigationGUI navGui;
+GPSLogger gpsLogger;
 
 
 extern "C" {
@@ -121,6 +123,15 @@ int main() {
     // Set time series update interval to 10 seconds
     navGui.setTimeSeriesUpdateInterval(10);
     navGui.init();
+    
+    // Initialize GPS logger with CSV file on SD card
+    printf("Initializing GPS logger...\n");
+    if (gpsLogger.init("/gps_log.csv")) {
+        printf("GPS logger initialized successfully\n");
+    } else {
+        printf("Failed to initialize GPS logger\n");
+    }
+    
     multicore_launch_core1(core1_main);
     static uint32_t last_logged_timestamp = 0;
 
@@ -154,6 +165,16 @@ int main() {
                 // malloc_stats();
 
                 update_gps_buffer(raw_snapshot, filtered_snapshot);
+                
+                // Log GPS data to CSV file
+                if (gpsLogger.isInitialized()) {
+                    if (gpsLogger.logData(raw_snapshot, filtered_snapshot)) {
+                        // Successful logging
+                    } else {
+                        printf("Error: Failed to log GPS data\n");
+                    }
+                }
+                
                 last_logged_timestamp = raw_snapshot.timestamp;
             }
 

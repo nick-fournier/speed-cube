@@ -61,6 +61,7 @@ add_subdirectory(lib/fatfs)
 add_subdirectory(lib/sdcard)
 add_subdirectory(lib/lcd)
 add_subdirectory(lib/webserver)
+add_subdirectory(lib/gps_logger)
 add_executable(speed-cube speed-cube.cpp )
 
 pico_set_program_name(speed-cube "speed-cube")
@@ -90,6 +91,7 @@ target_link_libraries(speed-cube
         L76B
         navigation
         webserver
+        gps_logger
         pico_cyw43_arch_lwip_threadsafe_background
         )
 
