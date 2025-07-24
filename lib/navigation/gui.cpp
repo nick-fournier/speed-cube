@@ -10,6 +10,9 @@ NavigationGUI::NavigationGUI() {
     m_pointers = new Pointers(this);
     
     // TackDetector is initialized with its constructor
+    
+    // Initialize battery monitor
+    m_batteryMonitor.begin();
 }
 
 NavigationGUI::~NavigationGUI() {
@@ -38,6 +41,9 @@ void NavigationGUI::init() {
     GUI_DisString_EN(10, 175, "SOG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(260, 175, "COG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(130, 175, "TACK", &Font20, BLACK, WHITE);
+    
+    // Initial battery display
+    updateBatteryDisplay();
 
     // Initialize plot area and draw initial plot
     m_timeSeries->clearPlotArea();
@@ -83,22 +89,11 @@ void NavigationGUI::update(GPSFix data) {
     char speedStr[8];
     char vmgStr[8];
     char courseStr[8];
-    char markStr[20];
-
-    // Store the current target mark name as string with prefix
-    snprintf(markStr, sizeof(markStr), "VMG (kt) -> %s", current_target.name);
-
 
     // Format the strings with one decimal place
     snprintf(speedStr, sizeof(speedStr), "%.1f", Data.speed);
     snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg_abs);    
     snprintf(courseStr, sizeof(courseStr), "%03d", static_cast<int>(round(Data.course)));
-
-    // Get length of string
-    int mark_str_len = 18 * strlen(markStr);
-
-    // Update the target display
-    // updateTarget();
 
     // Show VMG in top
     GUI_DisString_EN(70, 60, vmgStr, &Font96, LCD_BACKGROUND, WHITE);
@@ -130,6 +125,9 @@ void NavigationGUI::update(GPSFix data) {
         time_from_epoch(Data.timestamp, time_str, sizeof(time_str));
     }
     GUI_DisString_EN(0, 0, time_str, &Font24, BLACK, WHITE);
+    
+    // Update battery display
+    updateBatteryDisplay();
     
     // Always add data points when they arrive (to maintain data accuracy)
     uint32_t lastPlotUpdate = m_timeSeries->getLastUpdateTime();
@@ -190,6 +188,39 @@ void NavigationGUI::updateTarget() {
     
     // Draw the new text
     GUI_DisString_EN(320 - mark_str_len, 40, markStr, &Font24, BLACK, WHITE);
+}
+
+// Update the battery percentage display in the top right corner
+void NavigationGUI::updateBatteryDisplay() {
+    // Get battery percentage and current
+    float battery_percentage = m_batteryMonitor.getBatteryPercentage();
+    float current = m_batteryMonitor.getCurrent_mA();
+    
+    // Get display dimensions from sLCD_DIS
+    extern LCD_DIS sLCD_DIS;  // Declare the external LCD_DIS structure
+    
+    // Clear the battery display area
+    LCD_SetArealColor(215, 0, 320, 24, LCD_BACKGROUND);
+    
+    // Check if battery is charging (indicated by special value -1)
+    if (battery_percentage < 0) {
+        // Display "charging" instead of percentage
+        GUI_DisString_EN(220, 0, "charging", &Font16, BLACK, WHITE);
+    } else {
+        // Format as 2-digit whole integer with leading zero
+        char batteryStr[8];
+        snprintf(batteryStr, sizeof(batteryStr), "%02.0f%%", battery_percentage);
+        
+        // Draw the battery percentage
+        GUI_DisString_EN(265, 0, batteryStr, &Font24, BLACK, WHITE);
+    }
+    
+    // Debug output
+    if (battery_percentage < 0) {
+        printf("Battery: Charging, Current: %.2f mA\n", current);
+    } else {
+        printf("Battery: %.0f%%, Current: %.2f mA\n", battery_percentage, current);
+    }
 }
 
 // Cycle to the next target mark

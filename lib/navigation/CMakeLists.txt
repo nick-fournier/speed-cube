@@ -23,6 +23,7 @@ target_include_directories(navigation PUBLIC
     ${CMAKE_SOURCE_DIR}/lib/fatfs
     ${CMAKE_SOURCE_DIR}/lib/sdcard
     ${CMAKE_SOURCE_DIR}/lib/L76B
+    ${CMAKE_SOURCE_DIR}/lib/pico_ups
 )
 
 # Link Pico SDK libraries
@@ -34,8 +35,10 @@ target_link_libraries(navigation PUBLIC
     lcd
     config
     L76B
+    pico_ups
     hardware_spi
     hardware_gpio
+    hardware_i2c
 )
 
 # Set C++ standard

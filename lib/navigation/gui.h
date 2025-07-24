@@ -6,6 +6,7 @@
 #include "math.h"
 #include "tack_detector.h"
 #include "marks.h"
+#include "pico_ups.h"
 
 extern "C" {
     #include "DEV_Config.h"
@@ -63,6 +64,10 @@ class NavigationGUI {
         TimeSeriesPlot* m_timeSeries;
         Pointers* m_pointers;
         TackDetector m_tackDetector;  // Tack detection and tracking
+        INA219 m_batteryMonitor;      // Battery monitoring
+        
+        // Battery display
+        void updateBatteryDisplay();
         
         GPSFix Data;
 
