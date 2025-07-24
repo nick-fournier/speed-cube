@@ -77,6 +77,9 @@ class NavigationGUI {
         
         // Current target - using the marks from marks.h
         Target current_target = Navigation::MARKS[0];
+        
+        // Helper function to update the target display
+        void updateTarget();
 };
 
 #endif

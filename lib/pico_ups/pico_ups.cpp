@@ -358,36 +358,36 @@ float INA219::getPower_mW() {
 
 
 
-int main() {
-	float bus_voltage = 0;
-	float shunt_voltage = 0;
-	float power = 0;
-	float current = 0;
-	float P=0;
-	uint16_t value;
-	INA219 ina(0x43);
+// int main() {
+// 	float bus_voltage = 0;
+// 	float shunt_voltage = 0;
+// 	float power = 0;
+// 	float current = 0;
+// 	float P=0;
+// 	uint16_t value;
+// 	INA219 ina(0x43);
 	
-    const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-    gpio_init(LED_PIN);
-	stdio_init_all();
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-	ina.begin();
+//     const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+//     gpio_init(LED_PIN);
+// 	stdio_init_all();
+//     gpio_set_dir(LED_PIN, GPIO_OUT);
+// 	ina.begin();
 
-    while (true) {
-		bus_voltage = ina.getBusVoltage_V();         // voltage on V- (load side)
-		current = ina.getCurrent_mA()/1000;               // current in mA
-		P = (bus_voltage -3)/1.2*100;
-        if(P<0)P=0;
-		else if (P>100)P=100;
+//     while (true) {
+// 		bus_voltage = ina.getBusVoltage_V();         // voltage on V- (load side)
+// 		current = ina.getCurrent_mA()/1000;               // current in mA
+// 		P = (bus_voltage -3)/1.2*100;
+//         if(P<0)P=0;
+// 		else if (P>100)P=100;
 				
-		printf("Voltage:  %6.3f V\r\n",bus_voltage);
-		printf("Current:  %6.3f A\r\n",current);
-		printf("Percent:  %6.1f %%\r\n",P);
-		printf("\r\n");
+// 		printf("Voltage:  %6.3f V\r\n",bus_voltage);
+// 		printf("Current:  %6.3f A\r\n",current);
+// 		printf("Percent:  %6.1f %%\r\n",P);
+// 		printf("\r\n");
 		
-        gpio_put(LED_PIN, 1);
-        sleep_ms(1000);
-        gpio_put(LED_PIN, 0);
-        sleep_ms(1000);
-    }
-}
+//         gpio_put(LED_PIN, 1);
+//         sleep_ms(1000);
+//         gpio_put(LED_PIN, 0);
+//         sleep_ms(1000);
+//     }
+// }

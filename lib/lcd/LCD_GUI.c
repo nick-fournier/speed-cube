@@ -136,6 +136,7 @@ parameter:
 	Yend   ：Rectangular  End point y coordinate
 	Color  ：The color of the Rectangular segment
 	Filled : Whether it is filled--- 1 solid 0：empty
+    Dot_Pixel: The size of the rectangle
 ******************************************************************************/
 void GUI_DrawRectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend,
                        COLOR Color, DRAW_FILL Filled, DOT_PIXEL Dot_Pixel)

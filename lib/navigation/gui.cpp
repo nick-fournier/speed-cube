@@ -34,7 +34,7 @@ void NavigationGUI::init() {
     GUI_Clear(LCD_BACKGROUND);
 
     // Draw labels
-    GUI_DisString_EN(100, 40, "VMG (kt)", &Font20, BLACK, WHITE);
+    updateTarget();
     GUI_DisString_EN(10, 175, "SOG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(260, 175, "COG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(130, 175, "TACK", &Font20, BLACK, WHITE);
@@ -86,18 +86,19 @@ void NavigationGUI::update(GPSFix data) {
     char markStr[20];
 
     // Store the current target mark name as string with prefix
-    snprintf(markStr, sizeof(markStr), "->%s", current_target.name);
+    snprintf(markStr, sizeof(markStr), "VMG (kt) -> %s", current_target.name);
 
-    // Get length of string
-    int mark_str_len = 18 * strlen(markStr);
 
     // Format the strings with one decimal place
     snprintf(speedStr, sizeof(speedStr), "%.1f", Data.speed);
     snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg_abs);    
     snprintf(courseStr, sizeof(courseStr), "%03d", static_cast<int>(round(Data.course)));
 
-    // Show the current target mark
-    GUI_DisString_EN(320 - mark_str_len, 0, markStr, &Font24, BLACK, WHITE);
+    // Get length of string
+    int mark_str_len = 18 * strlen(markStr);
+
+    // Update the target display
+    // updateTarget();
 
     // Show VMG in top
     GUI_DisString_EN(70, 60, vmgStr, &Font96, LCD_BACKGROUND, WHITE);
@@ -177,6 +178,20 @@ float NavigationGUI::calculateVMG(float speed, float course, float target_bearin
     return speed * cos(course_rad - target_bearing_rad);
 }
 
+// Update the target display
+void NavigationGUI::updateTarget() {
+    // Format the target mark text
+    char markStr[20];
+    snprintf(markStr, sizeof(markStr), "VMG (kt) -> %s", current_target.name);
+    int mark_str_len = 18 * strlen(markStr);
+    
+    // Clear the text area
+    LCD_SetArealColor(0, 40, 480, 70, LCD_BACKGROUND);
+    
+    // Draw the new text
+    GUI_DisString_EN(320 - mark_str_len, 40, markStr, &Font24, BLACK, WHITE);
+}
+
 // Cycle to the next target mark
 void NavigationGUI::cycleToNextTarget() {
     // Use a more reliable approach with a timeout to prevent button lockup
@@ -219,10 +234,6 @@ void NavigationGUI::cycleToNextTarget() {
         printf("New bearing: %.1f degrees\n", target_bearing);
     }
     
-    // Clear the area where the mark name is displayed and redraw
-    GUI_DrawRectangle(320 - 18 * 10, 0, 320, 24, LCD_BACKGROUND, DRAW_FULL, DOT_PIXEL_1X1);
-    char markStr[20];
-    snprintf(markStr, sizeof(markStr), "->%s", current_target.name);
-    int mark_str_len = 18 * strlen(markStr);
-    GUI_DisString_EN(320 - mark_str_len, 0, markStr, &Font24, BLACK, WHITE);
+    // Update the target display
+    updateTarget();
 }
