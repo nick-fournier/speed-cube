@@ -74,9 +74,10 @@ void NavigationGUI::update(GPSFix data) {
         current_target.lat, current_target.lon
     );
     
-    // Update tack detector with current heading, speed, and timestamp
+    // Update tack detector with current heading, speed, timestamp, and position
     if (Data.status) {
         uint32_t current_time = to_ms_since_boot(get_absolute_time());
+        m_tackDetector.updatePosition(Data.lat, Data.lon);
         m_tackDetector.update(Data.course, Data.speed, current_time);
     }
 

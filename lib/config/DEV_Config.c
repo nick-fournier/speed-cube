@@ -48,7 +48,7 @@ void DEV_GPIO_Init(void)
 
     DEV_Digital_Write(TP_CS_PIN, 1);
     DEV_Digital_Write(LCD_CS_PIN, 1);
-    DEV_Digital_Write(LCD_BKL_PIN, 1);
+    DEV_Digital_Write(LCD_BKL_PIN, 1);  // Turn off backlight
     DEV_Digital_Write(SD_CS_PIN, 1);
 }
 
