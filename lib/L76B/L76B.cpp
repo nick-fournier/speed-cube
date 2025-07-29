@@ -152,7 +152,7 @@ void L76B::parse(const char* buffer) {
     working_data.speed = strtof(tokens[7], nullptr);
     working_data.course = strtof(tokens[8], nullptr);
     working_data.timestamp = to_epoch(date, time);
-    working_data.status = true;
+    working_data.status = (working_data.timestamp != 0);
 
     // Update kalman and share data
     share();

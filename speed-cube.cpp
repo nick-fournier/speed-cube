@@ -124,16 +124,13 @@ int main() {
     navGui.setTimeSeriesUpdateInterval(10);
     navGui.init();
     
-    // Initialize GPS logger with CSV file on SD card
-    printf("Initializing GPS logger...\n");
-    if (gpsLogger.init("/gps_log.csv")) {
-        printf("GPS logger initialized successfully\n");
-    } else {
-        printf("Failed to initialize GPS logger\n");
-    }
+    // We'll initialize the GPS logger after we get a valid GPS fix
+    // This allows us to use the accurate GPS timestamp for the filename
+    bool logger_initialized = false;
     
     multicore_launch_core1(core1_main);
     static uint32_t last_logged_timestamp = 0;
+    static int wait_counter = 0;
 
     while (true) {
         // Poll the Wi-Fi stack
@@ -154,6 +151,28 @@ int main() {
 
         // Update GUI using raw GPS fix
         if (raw_snapshot.status) {
+            // Initialize GPS logger with GPS timestamp if not already initialized
+            if (!logger_initialized) {
+                printf("GPS fix obtained, initializing logger with GPS timestamp...\n");
+                
+                // Generate a filename using month and day (mmdd) from the GPS timestamp
+                char filename[64];
+                time_t timestamp = (time_t)raw_snapshot.timestamp;
+                struct tm *tm_info = gmtime(&timestamp);
+                
+                // Format as mmdd (month and day)
+                int mmdd = (tm_info->tm_mon + 1) * 100 + tm_info->tm_mday;
+                snprintf(filename, sizeof(filename), "gps%04d.csv", mmdd);
+                
+                printf("Using date (mmdd) for filename: %04d (from timestamp %u)\n", mmdd, raw_snapshot.timestamp);
+                
+                if (gpsLogger.init(filename)) {
+                    printf("GPS logger initialized successfully with file: %s\n", filename);
+                    logger_initialized = true;
+                } else {
+                    printf("Failed to initialize GPS logger\n");
+                }
+            }
 
             // Update the GPS buffer with both raw and filtered data
             // for ever 5 seconds
@@ -161,7 +180,6 @@ int main() {
                 raw_snapshot.timestamp % 5 == 0 &&
                 raw_snapshot.timestamp != last_logged_timestamp
             ) {
-
                 // malloc_stats();
 
                 update_gps_buffer(raw_snapshot, filtered_snapshot);
@@ -181,7 +199,9 @@ int main() {
             // navGui.update(raw_snapshot);
             navGui.update(filtered_snapshot);
         } else {
-            printf("Waiting for raw GPS fix...\n");
+            if (wait_counter++ % 10 == 0) {
+                printf("Waiting for raw GPS fix...\n");
+            }
         }
 
         // Check if button press flag is set by the interrupt handler

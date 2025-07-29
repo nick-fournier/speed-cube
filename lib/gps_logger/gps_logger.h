@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gps_data.h"
-#include "../fatfs/ff.h"  // Correct path to ff.h
+#include "ff.h"  // Correct path to ff.h
 
 /**
  * @brief GPS Logger class for logging GPS data to CSV files
@@ -9,9 +9,9 @@
 class GPSLogger {
 public:
     /**
-     * @brief Initialize the GPS logger
+     * @brief Initialize the GPS logger with SD card and file system
      * 
-     * @param filename Name of the CSV file to create
+     * @param filename Name of the CSV file to create (required)
      * @return true if initialization was successful, false otherwise
      */
     bool init(const char* filename);

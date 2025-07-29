@@ -15,11 +15,13 @@ target_include_directories(gps_logger PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/lib/L76B  # For gps_data.h and gps_datetime.h
     ${CMAKE_SOURCE_DIR}/lib/fatfs  # For ff.h
+    ${CMAKE_SOURCE_DIR}/lib/sdcard  # For MMC_SD.h
 )
 
 # Link with necessary libraries
 target_link_libraries(gps_logger PUBLIC
     L76B        # For GPS data structures
+    sdcard
     pico_stdlib # For standard Pico functionality
 )
 

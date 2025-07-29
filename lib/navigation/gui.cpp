@@ -28,9 +28,6 @@ void NavigationGUI::init() {
     // Initialize Waveshare LCD peripherals
     System_Init();
 
-    // Initialize SD card
-    SD_Init();
-
     // Initialize LCD
     LCD_SCAN_DIR lcd_scan_dir = SCAN_DIR_DFT;
     LCD_Init(lcd_scan_dir, 800);
@@ -216,12 +213,12 @@ void NavigationGUI::updateBatteryDisplay() {
         GUI_DisString_EN(265, 0, batteryStr, &Font24, BLACK, WHITE);
     }
     
-    // Debug output
-    if (battery_percentage < 0) {
-        printf("Battery: Charging, Current: %.2f mA\n", current);
-    } else {
-        printf("Battery: %.0f%%, Current: %.2f mA\n", battery_percentage, current);
-    }
+    // // Debug output
+    // if (battery_percentage < 0) {
+    //     printf("Battery: Charging, Current: %.2f mA\n", current);
+    // } else {
+    //     printf("Battery: %.0f%%, Current: %.2f mA\n", battery_percentage, current);
+    // }
 }
 
 // Cycle to the next target mark
