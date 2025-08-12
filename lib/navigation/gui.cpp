@@ -35,7 +35,7 @@ void NavigationGUI::init() {
 
     // Draw labels
     updateTarget();
-    GUI_DisString_EN(0, 0, "No GPS...", &Font24, BLACK, WHITE);
+    GUI_DisString_EN(0, 0, "No GPS", &Font24, BLACK, WHITE);
     GUI_DisString_EN(10, 175, "SOG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(260, 175, "COG", &Font20, BLACK, WHITE);
     GUI_DisString_EN(130, 175, "TACK", &Font20, BLACK, WHITE);
@@ -118,8 +118,8 @@ void NavigationGUI::update(GPSFix data) {
     char time_str[10];
     
     // If Data.timestamp is 0, report "No GPS fix" to display
-    if (Data.timestamp < 1) {
-        snprintf(time_str, sizeof(time_str), "No GPS...");
+    if (Data.timestamp == 0) {
+        snprintf(time_str, sizeof(time_str), "No GPS");
     } else {
         time_from_epoch(Data.timestamp, time_str, sizeof(time_str));
     }
