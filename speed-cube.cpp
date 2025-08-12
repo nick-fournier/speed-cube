@@ -199,8 +199,9 @@ int main() {
             // navGui.update(raw_snapshot);
             navGui.update(filtered_snapshot);
         } else {
-            if (wait_counter++ % 10 == 0) {
+            if (wait_counter++ % 1000 == 0) {
                 printf("Waiting for raw GPS fix...\n");
+                wait_counter = 1;
             }
         }
 
@@ -216,7 +217,7 @@ int main() {
 
         // Print both to the console for debugging
         // printf("[RAW] time: %.2f, lat: %.6f, lon: %.6f, speed: %.2f, course: %.2f\n",
-        //     raw_snapshot.time,
+        //     raw_snapshot.timestamp,
         //     raw_snapshot.lat, raw_snapshot.lon,
         //     raw_snapshot.speed, raw_snapshot.course);
 
