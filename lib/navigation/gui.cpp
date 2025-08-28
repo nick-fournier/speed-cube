@@ -132,7 +132,7 @@ void NavigationGUI::update(GPSFix data) {
     
     // Show last tack heading if available
     float last_tack = m_tackDetector.getLastTackHeading();
-    char tackHeadingStr[8] = "-"; // Default to "N/A"
+    char tackHeadingStr[8] = " -"; // Default to "N/A"
     if (last_tack > 0.0) {
         snprintf(tackHeadingStr, sizeof(tackHeadingStr), "%03d", static_cast<int>(round(last_tack)));
     }
