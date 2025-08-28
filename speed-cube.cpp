@@ -16,27 +16,45 @@
 // Define the GPIO pin for the button
 const uint BUTTON_PIN = 2;  // Using GPIO pin 2 as specified by user
 
-// Volatile flag for interrupt-based button handling
+// Volatile flags for interrupt-based button handling
 static volatile bool button_pressed_flag = false;
+static volatile bool button_released_flag = false;
 static uint32_t last_button_time = 0;
+static uint32_t button_press_start_time = 0;
+static const uint32_t LONG_PRESS_DURATION = 3000;  // 3 seconds for long press
+static bool long_press_processed = false;  // Flag to track if long press was already processed
 
-// Interrupt handler for button press
-void button_callback(uint gpio, uint32_t events) {
-    uint32_t current_time = to_ms_since_boot(get_absolute_time());
-    
-    // Simple software debouncing in the interrupt handler
-    if (current_time - last_button_time > 50) {  // 50ms debounce in interrupt
-        button_pressed_flag = true;
-        last_button_time = current_time;
-        printf("Button press detected in interrupt at %u ms\n", current_time);
-    }
-}
+// Forward declarations
+void button_callback(uint gpio, uint32_t events);
 
 L76B l76b;
 KalmanFilter kf;
 NavigationGUI navGui;
 GPSLogger gpsLogger;
 
+// Interrupt handler for button press and release
+void button_callback(uint gpio, uint32_t events) {
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    
+    // Simple software debouncing in the interrupt handler
+    if (current_time - last_button_time > 50) {  // 50ms debounce in interrupt
+        last_button_time = current_time;
+        
+        if (events & GPIO_IRQ_EDGE_FALL) {
+            // Button press detected
+            button_press_start_time = current_time;
+            button_pressed_flag = true;
+            button_released_flag = false;
+            long_press_processed = false;  // Reset the long press processed flag
+            printf("Button press detected in interrupt at %u ms\n", current_time);
+        } else if (events & GPIO_IRQ_EDGE_RISE) {
+            // Button release detected
+            button_released_flag = true;
+            printf("Button release detected in interrupt at %u ms, press duration: %u ms\n", 
+                   current_time, current_time - button_press_start_time);
+        }
+    }
+}
 
 extern "C" {
     #include <malloc.h>
@@ -79,7 +97,7 @@ void update_gps_buffer(
     // Iterate the buffer index
     gps_buffer_index = (gps_buffer_index + 1) % GPS_BUFFER_SIZE;
 
-    // Only increase count if buffer isn’t already full
+    // Only increase count if buffer isn't already full
     if (gps_buffer_count < GPS_BUFFER_SIZE) {
         gps_buffer_count++;
     }
@@ -105,8 +123,8 @@ int main() {
     gpio_set_dir(BUTTON_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_PIN);  // Enable pull-up resistor
     
-    // Set up the interrupt - trigger on falling edge (button press)
-    gpio_set_irq_enabled_with_callback(BUTTON_PIN, GPIO_IRQ_EDGE_FALL, true, &button_callback);
+    // Set up the interrupt - trigger on both falling and rising edges (press and release)
+    gpio_set_irq_enabled_with_callback(BUTTON_PIN, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &button_callback);
     printf("Button setup with interrupt complete\n");
 
     // Start webserver using filtered data
@@ -205,14 +223,33 @@ int main() {
             }
         }
 
-        // Check if button press flag is set by the interrupt handler
+        // Check if button is currently pressed
         if (button_pressed_flag) {
-            // Process the button press
-            printf("Processing button press from interrupt, cycling to next target\n");
-            navGui.cycleToNextTarget();
+            uint32_t current_time = to_ms_since_boot(get_absolute_time());
+            uint32_t press_duration = current_time - button_press_start_time;
             
-            // Clear the flag
-            button_pressed_flag = false;
+            // Check for long press while button is still held down
+            if (!long_press_processed && press_duration >= LONG_PRESS_DURATION) {
+                // Long press detected - toggle target mode
+                printf("Long press detected while holding (%u ms), toggling target mode\n", press_duration);
+                navGui.toggleTargetMode();
+                long_press_processed = true;  // Mark as processed to avoid multiple triggers
+            }
+            
+            // Check if button was released
+            if (button_released_flag) {
+                if (!long_press_processed) {
+                    // Short press detected - cycle to next target
+                    printf("Short press detected (%u ms), cycling to next target\n", press_duration);
+                    navGui.cycleToNextTarget();
+                } else {
+                    printf("Button released after long press, no additional action needed\n");
+                }
+                
+                // Reset flags
+                button_pressed_flag = false;
+                button_released_flag = false;
+            }
         }
 
         // Print both to the console for debugging

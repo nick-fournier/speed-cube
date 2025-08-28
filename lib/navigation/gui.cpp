@@ -66,11 +66,13 @@ void NavigationGUI::update(GPSFix data) {
         Data.course = 135.0; // Arbitrary course for simulation
     }
 
-    // Update the current bearing to the target mark
-    target_bearing = calculateBearing(
-        Data.lat, Data.lon,
-        current_target.lat, current_target.lon
-    );
+    // Update the current bearing to the target mark if in target mode
+    if (m_targetMode) {
+        target_bearing = calculateBearing(
+            Data.lat, Data.lon,
+            current_target.lat, current_target.lon
+        );
+    }
     
     // Update tack detector with current heading, speed, timestamp, and position
     if (Data.status) {
@@ -79,32 +81,54 @@ void NavigationGUI::update(GPSFix data) {
         m_tackDetector.update(Data.course, Data.speed, current_time);
     }
 
-    // Calculate VMG and store the sign as a character
-    float vmg = calculateVMG(Data.speed, Data.course, target_bearing);
-    char vmg_sign[2] = { (vmg < 0 ? '-' : ' '), '\0' };
-    float vmg_abs = fabs(vmg);
+    // Calculate VMG if in target mode
+    float vmg = 0.0;
+    char vmg_sign[2] = { ' ', '\0' };
+    float vmg_abs = 0.0;
+    
+    if (m_targetMode) {
+        vmg = calculateVMG(Data.speed, Data.course, target_bearing);
+        vmg_sign[0] = (vmg < 0 ? '-' : ' ');
+        vmg_abs = fabs(vmg);
+    }
+
+    // Update max speed if available
+    if (Data.speed > max_sog) {
+        max_sog = Data.speed;
+    }
 
     // Format speed floats as strings
     char speedStr[8];
     char vmgStr[8];
     char courseStr[8];
+    char maxSpeedStr[8];
 
     // Format the strings with one decimal place
     snprintf(speedStr, sizeof(speedStr), "%.1f", Data.speed);
     snprintf(vmgStr, sizeof(vmgStr), "%.1f", vmg_abs);    
     snprintf(courseStr, sizeof(courseStr), "%03d", static_cast<int>(round(Data.course)));
+    
+    if (m_targetMode) {
+        // In target mode, show VMG prominently
+        GUI_DisString_EN(70, 60, vmgStr, &Font96, LCD_BACKGROUND, WHITE);
+        GUI_DisString_EN(10, 60, vmg_sign, &Font96, LCD_BACKGROUND, WHITE);
+        
+        // Show SOG below
+        GUI_DisString_EN(5, 200, speedStr, &Font48, LCD_BACKGROUND, WHITE);
+    } else {
+        // In no-target mode, show SOG prominently
+        GUI_DisString_EN(70, 60, speedStr, &Font96, LCD_BACKGROUND, WHITE);
+        
+        // Clear the VMG area since we're not showing it in no-target mode
+        // LCD_SetArealColor(0, 200, 120, 248, LCD_BACKGROUND);
 
-    // Show VMG in top
-    GUI_DisString_EN(70, 60, vmgStr, &Font96, LCD_BACKGROUND, WHITE);
-
-    // Show the sign left of the VMG, to keep centered
-    GUI_DisString_EN(10, 60, vmg_sign, &Font96, LCD_BACKGROUND, WHITE);
-
-    // Show speed over ground
-    GUI_DisString_EN(10, 200, speedStr, &Font36, LCD_BACKGROUND, WHITE);
+        // Display max speed where SOG was
+        snprintf(maxSpeedStr, sizeof(maxSpeedStr), "%.1f", max_sog);
+        GUI_DisString_EN(5, 200, maxSpeedStr, &Font48, LCD_BACKGROUND, WHITE);
+    }
 
     // Show course over ground
-    GUI_DisString_EN(240, 200, courseStr, &Font36, LCD_BACKGROUND, WHITE);
+    GUI_DisString_EN(230, 200, courseStr, &Font48, LCD_BACKGROUND, WHITE);
     
     // Show last tack heading if available
     float last_tack = m_tackDetector.getLastTackHeading();
@@ -112,7 +136,7 @@ void NavigationGUI::update(GPSFix data) {
     if (last_tack > 0.0) {
         snprintf(tackHeadingStr, sizeof(tackHeadingStr), "%03d", static_cast<int>(round(last_tack)));
     }
-    GUI_DisString_EN(140, 200, tackHeadingStr, &Font36, BLACK, WHITE);
+    GUI_DisString_EN(120, 200, tackHeadingStr, &Font48, BLACK, WHITE);
 
     // Print timestamp
     char time_str[10];
@@ -179,7 +203,10 @@ float NavigationGUI::calculateVMG(float speed, float course, float target_bearin
 void NavigationGUI::updateTarget() {
     // Format the target mark text
     char markStr[20];
+    
+    // In target mode, show VMG to target
     snprintf(markStr, sizeof(markStr), "VMG (kt) -> %s", current_target.name);
+    
     int mark_str_len = 18 * strlen(markStr);
     
     // Clear the text area
@@ -187,6 +214,48 @@ void NavigationGUI::updateTarget() {
     
     // Draw the new text
     GUI_DisString_EN(320 - mark_str_len, 40, markStr, &Font24, BLACK, WHITE);
+}
+
+// Toggle between target mode and no-target mode
+void NavigationGUI::toggleTargetMode() {
+    // Use a more reliable approach with a timeout to prevent button lockup
+    static uint32_t last_toggle_time = 0;
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    char markStr[20];
+    
+    // Allow toggling if at least 100ms has passed since the last toggle
+    if (current_time - last_toggle_time < 100) {
+        printf("Toggling too fast, ignoring request\n");
+        return;
+    }
+    
+    // Update the last toggle time
+    last_toggle_time = current_time;
+    
+    // Toggle the target mode
+    m_targetMode = !m_targetMode;
+    
+    if (m_targetMode) {
+        printf("Switched to target mode, showing VMG to %s\n", current_target.name);
+        // Set minor display for SOG
+        GUI_DisString_EN(10, 175, "SOG", &Font20, BLACK, WHITE);
+        // In target mode, show VMG to target
+        updateTarget();
+    } else {
+        printf("Switched to no-target mode, showing SOG prominently\n");
+
+        // Clear the label area
+        LCD_SetArealColor(0, 40, 480, 70, LCD_BACKGROUND);
+        GUI_DisString_EN(140, 40, "SOG", &Font24, BLACK, WHITE);
+
+        // Clear the main display area for the prominent value
+        LCD_SetArealColor(0, 60, 320, 156, LCD_BACKGROUND);
+
+        // Set minor display for SOG
+        GUI_DisString_EN(10, 175, "Max", &Font20, BLACK, WHITE);
+
+    }
+
 }
 
 // Update the battery percentage display in the top right corner
@@ -227,6 +296,11 @@ void NavigationGUI::cycleToNextTarget() {
     // Use a more reliable approach with a timeout to prevent button lockup
     static uint32_t last_cycle_time = 0;
     uint32_t current_time = to_ms_since_boot(get_absolute_time());
+
+    if (!m_targetMode) {
+        printf("Not in target mode, ignoring cycle request\n");
+        return;
+    }
     
     // Allow cycling if at least 100ms has passed since the last cycle
     // This is more reliable than a boolean flag that could get stuck

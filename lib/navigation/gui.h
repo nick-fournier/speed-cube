@@ -50,6 +50,9 @@ class NavigationGUI {
         // Target selection
         void cycleToNextTarget();
         
+        // Toggle target mode (used for long press)
+        void toggleTargetMode();
+        
         // Configure time series plot
         void setTimeSeriesUpdateInterval(uint32_t seconds);
     
@@ -79,9 +82,13 @@ class NavigationGUI {
         // Internal variables
         float target_bearing = 0.0; // Target bearing in degrees
         float tack_bearing = 0.0;   // Opposing tack bearing in degrees
-        
+        float max_sog = 0.0; // Keep track of maximum speed over ground
+
         // Current target - using the marks from marks.h
         Target current_target = Navigation::MARKS[0];
+        
+        // Flag to indicate whether we're in target mode or not
+        bool m_targetMode = true;
         
         // Helper function to update the target display
         void updateTarget();
